@@ -1,7 +1,7 @@
 {
   "version": 1,
   "updated": "2026-08-02",
-  "_comment": "Friend-facing mod catalog. friend_allowed: true 為朋友可裝。",
+  "_comment": "Friend-facing mod catalog. friend_allowed: true 為朋友可裝。WTD 暫不開放。",
   "mods": {
     "BreedingHelper": {
       "name": "BreedingHelper",
@@ -23,29 +23,6 @@
           ],
           "needs_ue4ss": false,
           "size_hint_kb": 4100
-        }
-      }
-    },
-    "WorldTreeDragonSuperEvolution": {
-      "name": "WorldTreeDragonSuperEvolution",
-      "display_name_zh": "世界樹龍 (WTD) - 客戶端",
-      "category": "gameplay",
-      "version": "v0.9.0-rc15",
-      "description_zh": "可騎乘 + 縮小的世界樹龍（客戶端）。需要 server 也裝 WTDForceAll + WTDScaler 才能看到效果。",
-      "tags": [
-        "騎乘",
-        "client+server"
-      ],
-      "friend_allowed": true,
-      "components": {
-        "client": {
-          "url": "https://raw.githubusercontent.com/gryzzomaoc-afk/palworld-modpack/main/WorldTreeDragonSuperEvolution-client.zip",
-          "extract_to": "Pal/Binaries/Win64/ue4ss/Mods/WorldTreeDragonSuperEvolution",
-          "files": [
-            "Scripts/main.lua"
-          ],
-          "needs_ue4ss": true,
-          "size_hint_kb": 100
         }
       }
     }
