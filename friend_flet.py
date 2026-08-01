@@ -434,14 +434,16 @@ def main(page: ft.Page):
             page.update()
             return
         for name, mod in mods_dict.items():
-            display = mod.get("display_name", name)
+            display = mod.get("display_name_zh") or mod.get("display_name") or name
             version = mod.get("version", "?")
-            desc = mod.get("description", "")
+            # v1.0.8: prefer _zh keys; fall back to legacy English keys for compat
+            desc = mod.get("description_zh") or mod.get("description", "")
+            features = mod.get("features_zh") or mod.get("features") or []
             installed = is_mod_installed(mod, state.get("palworld_path"))
-            mods_column.controls.append(build_mod_card(name, mod, display, version, desc, installed))
+            mods_column.controls.append(build_mod_card(name, mod, display, version, desc, features, installed))
         page.update()
 
-    def build_mod_card(name, mod, display, version, desc, installed):
+    def build_mod_card(name, mod, display, version, desc, features, installed):
         status_chip = ft.Container(
             content=ft.Row(
                 [
@@ -521,6 +523,41 @@ def main(page: ft.Page):
                 ),
             )
 
+        # v1.0.8: render features_zh as a small bullet list below the
+        # description so the mod card actually shows what each mod does
+        # (the old v1.0.7 card only had a one-line description that was
+        # almost always empty).
+        feature_controls = []
+        if features:
+            feature_controls.append(ft.Container(height=4))
+            for feat in features:
+                feature_controls.append(
+                    ft.Row(
+                        [
+                            ft.Text("•", size=12, color=ACCENT),
+                            ft.Text(
+                                str(feat),
+                                size=11,
+                                color=TEXT_SECONDARY,
+                                expand=True,
+                            ),
+                        ],
+                        spacing=6,
+                        tight=True,
+                    )
+                )
+            feature_controls.append(ft.Container(height=2))
+            # tag chips row (if any)
+            tags = mod.get("tags") or []
+            if tags:
+                feature_controls.append(
+                    ft.Row(
+                        [ft.Text(t, size=9, color=TEXT_MUTED) for t in tags],
+                        spacing=6,
+                        tight=True,
+                    )
+                )
+
         return ft.Container(
             content=ft.Column(
                 [
@@ -549,6 +586,7 @@ def main(page: ft.Page):
                     ),
                     ft.Container(height=6),
                     ft.Text(desc, size=12, color=TEXT_SECONDARY, max_lines=2, overflow=ft.TextOverflow.ELLIPSIS),
+                    *feature_controls,
                 ],
                 spacing=0,
             ),

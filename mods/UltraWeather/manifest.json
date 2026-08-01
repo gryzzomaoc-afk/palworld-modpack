@@ -3,7 +3,7 @@
   "display_name_zh": "極致天氣",
   "version": "1.0.1",
   "category": "visual",
-  "description_zh": "進階天氣 / 天空系統 — 體積雲、霧色、天空時程表、post-process 覆寫。Client-only（需要 local player controller + viewport，dedicated server 不適用）。",
+  "description_zh": "進階天氣 / 天空系統",
   "tags": [
     "天氣",
     "視覺",
@@ -25,5 +25,13 @@
       "sha256": "a5734597851f3b57e4c0a8a834d53144157f7ba2a97e1223ea060e112a97100e",
       "_note": "UE4SS Lua mod. Client-only (uses IsLocalPlayerController + viewport world checks; refuses to run on dedicated server)."
     }
-  }
+  },
+  "features_zh": [
+    "Sky Creator 時程表自訂（可改每天日出日落時間）",
+    "體積雲（volumetric clouds — 預設 Palworld 沒裝）",
+    "Height Fog 隨時間變色",
+    "天氣模式的 post-process 覆寫（更戲劇化的光線）",
+    "F8 即時同步 / 重套 preset",
+    "Client-only（dedicated server 不適用）"
+  ]
 }

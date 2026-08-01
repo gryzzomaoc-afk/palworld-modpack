@@ -3,7 +3,7 @@
   "display_name_zh": "育種助手",
   "version": "v1.1+v2",
   "category": "breeding",
-  "description_zh": "育種配對計算 + 繁中 UI。給你 parent 算最優 child、染色/IV 鎖定、群組規劃。v2 修了 F8 在 dedicated server crash 的問題（try_hook_widget_tick 跳過 RegisterHook，靠 LoopAsync fallback 跑 heartbeat）。",
+  "description_zh": "育種配對計算 + 繁中 UI",
   "tags": [
     "繁中",
     "UI"
@@ -34,5 +34,12 @@
       "sha256": "1dcd49388d78cdfcd25016c7cea881662ffc294be6348f0cafa2a57ba8a7c424",
       "_note": "BreedingHelperUI_P.pak is identical to upstream (patches are lua-side, not UI assets)"
     }
-  }
+  },
+  "features_zh": [
+    "給 parent pair 算最優 child（CP、被動技能繼承）",
+    "染色 / IV 鎖定（passive skill 篩選）",
+    "群組規劃（批量配種 / 整個基地一次算）",
+    "繁體中文 UI（v1.1 客製版）",
+    "v2 修 F8 在 dedicated server crash 的問題"
+  ]
 }
