@@ -34,53 +34,6 @@
         }
       },
       "friend_allowed": true
-    },
-    "WatchDoS": {
-      "name": "WatchDoS",
-      "display_name_zh": "Watch-DoS 防濫連",
-      "category": "admin",
-      "version": "1.0.0",
-      "description_zh": "監控異常連線，自動封鎖可疑 IP。純 server 端，client 端不用裝。",
-      "tags": [
-        "server-only",
-        "安全"
-      ],
-      "components": {
-        "server": {
-          "url": "local://WatchDoS/server.zip",
-          "extract_to": "watchdog",
-          "files": [
-            "Watch-DoS.ps1"
-          ],
-          "needs_ue4ss": false,
-          "size_hint_kb": 8
-        }
-      },
-      "friend_allowed": false
-    },
-    "WTD": {
-      "name": "WTD",
-      "display_name_zh": "世界樹龍 (WTD)",
-      "category": "gameplay",
-      "version": "0.9.0-rc15",
-      "description_zh": "可騎乘 + 縮小的世界樹龍。Server 跟 client 兩邊都要裝。",
-      "tags": [
-        "server+client",
-        "騎乘"
-      ],
-      "components": {
-        "server": {
-          "url": "https://raw.githubusercontent.com/gryzzomaoc-afk/palworld-modpack/main/WTD-server.zip",
-          "needs_ue4ss": true,
-          "size_hint_kb": 12
-        },
-        "client": {
-          "url": "https://raw.githubusercontent.com/gryzzomaoc-afk/palworld-modpack/main/WorldTreeDragonSuperEvolution-client.zip",
-          "needs_ue4ss": true,
-          "size_hint_kb": 30
-        }
-      },
-      "friend_allowed": true
     }
   },
   "_comment": "Friend-facing mod catalog. friend_allowed: true 為朋友可裝。",
