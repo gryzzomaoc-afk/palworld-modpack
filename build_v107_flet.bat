@@ -1,10 +1,6 @@
 @echo off
-REM build_v107.bat — build PalworldFriendModInstaller v1.0.7
-REM Use flet pack (NOT raw PyInstaller) so the Flet client + custom
-REM UI theme gets bundled properly. PyInstaller alone produces an 8MB exe
-REM without the Flet client (broken: just a console window).
 setlocal
-set LOG=%~dp0build_v107.log
+set LOG=%~dp0build_v107_flet.log
 echo [%date% %time%] build v1.0.7 (flet pack) start > "%LOG%"
 cd /d "%~dp0"
 C:\Users\yason\.minimax\workspace\friend-tool-venv\Scripts\flet.exe pack friend_flet.py -n PalworldFriendModInstaller -i "E:\TOOL\installer.ico" --add-data "E:\TOOL\installer.ico;." --add-data "E:\TOOL\friend-catalog.json;." --product-name "PalworldFriendModInstaller" --product-version "1.0.7" --file-version "1.0.7.0" --company-name "CrazyChips" --file-description "Palworld 1-click mod installer" -y >> "%LOG%" 2>&1
