@@ -1,27 +1,38 @@
-# 更新日誌
+# Changelog (更新日誌)
+
+All dates in GMT+8.
 
 ## v1.0.7 (2026-08-02)
 
-### 新增
-- **Pal 運行檢查** — install/uninstall 前自動偵測 Palworld.exe 是否在跑，跑了就拒絕安裝（避免 .pak/.dll 被 lock）
-- **自動備份** — install_ue4ss / uninstall_ue4ss / install_mod 前先把現有資料夾備份成 `*.bak-<timestamp>\`，可手動回滾
-- **UE4SS 健全檢查 (`check_ue4ss_health`)** — 不只查 `UE4SS.dll`，還驗 `Mods/shared/UEHelpers/UEHelpers.lua` 等 5 個關鍵檔案
-- **Mod 驗證 (`verify_mod_install`)** — 裝完檢查 catalog 列的檔案是否都在對位置
-- **🔎 驗證 UE4SS 按鈕**（UI） — 點下去跑所有驗證，dialog 顯示結果
-- **安裝失敗自動回滾** — install_ue4ss layout 驗證失敗時自動從備份還原
+### Added (新增)
+- **Pal running check** — install_ue4ss / uninstall_ue4ss / _install_component all check if Palworld.exe is running first; refuse to proceed if so (prevents .pak / .dll lock issues).
+- **Auto-backup** — before any destructive install/uninstall, snapshot the existing mod folder to `Mods/<name>.bak-<timestamp>` (or `ue4ss.bak-<timestamp>` for the whole UE4SS dir). User can manually restore if needed.
+- **UE4SS layout health check** (`check_ue4ss_health`) — verifies 5 critical files beyond just `UE4SS.dll`: `UE4SS-settings.ini`, `Mods/`, `Mods/shared/UEHelpers/UEHelpers.lua`, `Mods/mods.txt`.
+- **Mod verification** (`verify_mod_install`) — after install, checks all `files[]` entries from the catalog exist at expected paths.
+- **In-UI verify button** — verify button on the UE4SS card runs `check_ue4ss_health` + `verify_mod_install` for all installed mods, shows results in a dialog.
+- **Auto-rollback on install failure** — if `install_ue4ss` layout verification fails, automatically restore from the backup snapshot so user isn't left with a broken install.
 
-### 修正
-- **install_mod 報錯 bug** — `_install_component` 內 `backup_msg` 在 client 分支沒初始化，導致 client 安裝時回傳 `ok=False` 但檔案其實裝好了
-- **verify_mod_install 誤用 SHA256** — 之前拿 catalog zip 層級 SHA256 對 inner file，現在改成單純 existence check
+### Fixed (修正)
+- **`_install_component` client branch bug** — `backup_msg` variable was not initialized in the client (non-UE4SS) path, causing `UnboundLocalError: backup_msg referenced before assignment` which made client installs report `ok=False` even though the file was actually written.
+- **`verify_mod_install` SHA256 misuse** — was hashing on-disk files and comparing to the catalog zip-level SHA256 (which is the whole archive hash, not per-file). Now just checks file existence.
+- **Catalog UTF-8 BOM + mojibake** — PowerShell `Set-Content -Encoding UTF8` prepends a UTF-8 BOM and the file had been re-saved with wrong encoding at some point. Catalog is now strict UTF-8 (no BOM) and Chinese characters verified correct.
+- **Bundled catalog lookup** — `friend_common._default_catalog_path()` now checks `sys._MEIPASS` first (where PyInstaller / Flet onefile unpacks `--add-data` files), so the .exe no longer falls back to a broken GitHub catalog when the bundled one is right there.
+- **Flet 0.86.4 API compatibility** — `page.show_snack_bar` → `page.show_dialog(ft.SnackBar(...))`; `page.open` → `page.show_dialog`; `data.decode("utf-8")` → `data.decode("utf-8-sig")` for catalog.
 
-### 已知問題
-- friend installer 不會保留使用者自訂的 Lua patch（例：`try_hook_widget_tick` v2 fix）。要 patch 自己 server 端再 push 一版給朋友。
+### Friend installer
+- Single friend tool downloads ~60 MB self-contained `.exe` (Flet 0.86.4 + Python 3.11 embeddable).
+- Catalog has only **BreedingHelper v1.1+v2** (CrazyChips custom build, includes the v2 try_hook_widget_tick fix that prevents the F8 crash on dedicated server).
+- First-run SmartScreen warning documented in USAGE.md with bypass steps.
+
+### Known issues
+- Friend installer does NOT preserve user-customized Lua patches. If a friend needs to add their own Lua fix on top, they have to re-apply after install.
+- `install_ue4ss` layout verification assumes the Okaetsu zip structure (UEHelpers at `Mods/shared/UEHelpers/UEHelpers.lua`). If upstream changes the layout, the verification will fail and the install will auto-rollback; would need to update `check_ue4ss_health` expected paths.
 
 ## v1.0.6 (2026-08-01)
-- 初次完整版
-- friend_flet.py 完整 UI（深色主題、Flet 0.86.4）
-- install_ue4ss 從 Okaetsu 下載，自動解壓
-- install_mod 處理 UE4SS mod + .pak mod
-- SHA256 驗證（zip 層級）
-- mods.txt append（不覆蓋）
-- enabled.txt 自動建立
+- Initial complete release.
+- friend_flet.py full Flet UI (dark theme, Flet 0.86.4).
+- install_ue4ss downloads Okaetsu, extracts.
+- install_mod handles UE4SS mod + .pak mod.
+- SHA256 verification (zip-level).
+- mods.txt append (not overwrite).
+- enabled.txt auto-created.

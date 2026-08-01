@@ -22,7 +22,7 @@
             "Scripts/main.lua",
             "Scripts/data.lua"
           ],
-          "sha256": "4cbc4e5259e6acaad1fdb05018d542fda9db82ab99bd2a5526569ea1586e74d4",
+          "sha256": "c889283678b1c1d3d0281b746cd748880b1097ab194ddd14fd78c0b552155bc7",
           "_note": "lua scripts patched by CrazyChips to hide BtnAuthor, TitleText, system messages"
         },
         "client": {
@@ -33,7 +33,7 @@
           "files": [
             "BreedingHelperUI_P.pak"
           ],
-          "sha256": "5fbb0d5a39c83f5e8746e3bdfac3a4cce9c40f77e3d0a87cd14ab60e5cb94dad",
+          "sha256": "1dcd49388d78cdfcd25016c7cea881662ffc294be6348f0cafa2a57ba8a7c424",
           "_note": "BreedingHelperUI_P.pak is identical to upstream (patches are lua-side, not UI assets)"
         }
       },
