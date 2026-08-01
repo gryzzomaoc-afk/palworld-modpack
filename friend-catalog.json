@@ -1,7 +1,7 @@
 {
   "version": 1,
   "updated": "2026-08-02",
-  "_comment": "Friend-facing mod catalog. friend_allowed: true 為朋友可裝。WTD 暫不開放。",
+  "_comment": "friend-allowed mods. Paks mods go in Paks/~mods/ (NOT root).",
   "mods": {
     "BreedingHelper": {
       "name": "BreedingHelper",
@@ -17,7 +17,7 @@
       "components": {
         "client": {
           "url": "https://raw.githubusercontent.com/gryzzomaoc-afk/palworld-modpack/main/BreedingHelper-client.zip",
-          "extract_to": "Pal/Content/Paks",
+          "extract_to": "Pal/Content/Paks/~mods",
           "files": [
             "BreedingHelperUI_P.pak"
           ],
