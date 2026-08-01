@@ -38,15 +38,27 @@ CONFIG_FILE = Path.home() / ".palworld_friend_tool.json"
 
 
 def _default_catalog_path() -> str:
-    """Default to friend-catalog.json next to the .exe (or this script)."""
+    """Default to friend-catalog.json bundled with the tool.
+
+    Resolution order (first hit wins):
+      1. sys._MEIPASS/friend-catalog.json   — PyInstaller/Flet onefile bundled path
+      2. <exe-dir>/friend-catalog.json      — next to the .exe (sys.executable)
+      3. <script-dir>/friend-catalog.json    — source-tree run (python friend_flet.py)
+      4. GitHub raw URL                      — last-resort fetch from the public repo
+    """
+    candidates: list[Path] = []
     if getattr(sys, "frozen", False):
-        # pyinstaller / flet onefile: sys.executable is the .exe
-        exe_dir = Path(sys.executable).parent
+        # PyInstaller / Flet onefile extract dir (where --add-data files live)
+        meipass = getattr(sys, "_MEIPASS", None)
+        if meipass:
+            candidates.append(Path(meipass) / "friend-catalog.json")
+        # Next to the .exe (where friend might drop a custom catalog)
+        candidates.append(Path(sys.executable).parent / "friend-catalog.json")
     else:
-        exe_dir = Path(__file__).parent.resolve()
-    local = exe_dir / "friend-catalog.json"
-    if local.exists():
-        return local.as_uri()  # file:///C:/...
+        candidates.append(Path(__file__).parent.resolve() / "friend-catalog.json")
+    for c in candidates:
+        if c.exists():
+            return c.as_uri()  # file:///C:/...
     return "https://raw.githubusercontent.com/gryzzomaoc-afk/palworld-modpack/main/friend-catalog.json"
 
 
@@ -200,7 +212,10 @@ def fetch_catalog(url: str) -> dict:
         raise RuntimeError(f"HTTP {e.code}: {e.reason}")
     except urllib.error.URLError as e:
         raise RuntimeError(f"URL error: {e.reason}")
-    return json.loads(data.decode("utf-8"))
+    # Use utf-8-sig so we transparently handle a UTF-8 BOM if the catalog
+    # was saved with one (common when using Windows tools like PowerShell's
+    # Set-Content -Encoding UTF8, which prepends a BOM by default).
+    return json.loads(data.decode("utf-8-sig"))
 
 
 # --- UE4SS prereq (Okaetsu RE-UE4SS for Palworld) ---

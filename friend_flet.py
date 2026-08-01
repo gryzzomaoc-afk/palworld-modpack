@@ -188,7 +188,9 @@ def main(page: ft.Page):
             "error": ERROR,
         }.get(level, ACCENT)
         try:
-            page.show_snack_bar(
+            # Flet 0.86.4 uses page.show_dialog(ft.SnackBar(...)) instead of
+            # page.show_snack_bar (the latter is only in newer Flet versions).
+            page.show_dialog(
                 ft.SnackBar(
                     content=ft.Text(msg, color="#ffffff"),
                     bgcolor=color,
@@ -349,9 +351,9 @@ def main(page: ft.Page):
         dlg = ft.AlertDialog(
             title=ft.Text(title),
             content=ft.Text(msg, selectable=True, size=12),
-            actions=[ft.TextButton("關閉", on_click=lambda e: page.close(dlg))],
+            actions=[ft.TextButton("關閉", on_click=lambda e: page.pop_dialog())],
         )
-        page.open(dlg)
+        page.show_dialog(dlg)
 
     ue4ss_install_btn.on_click = do_install_ue4ss
     ue4ss_uninstall_btn.on_click = do_uninstall_ue4ss
