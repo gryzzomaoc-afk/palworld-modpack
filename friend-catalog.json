@@ -6,7 +6,7 @@
       "name": "BreedingHelper",
       "display_name_zh": "育種助手",
       "category": "breeding",
-      "version": "4341.2.17.0",
+      "version": "v1.1",
       "description_zh": "育種配對計算 + 繁中 UI。給你 parent 算最優 child、染色/IV 鎖定、群組規劃。",
       "tags": [
         "繁中",
@@ -14,21 +14,14 @@
       ],
       "components": {
         "server": {
-          "url": "local://BreedingHelper/server.zip",
-          "extract_to": "ue4ss/Mods/BreedingHelper",
-          "files": [
-            "Scripts/main.lua",
-            "Scripts/data.lua"
-          ],
+          "url": "https://raw.githubusercontent.com/gryzzomaoc-afk/palworld-modpack/main/BreedingHelper-server.zip",
+          "extract_to": "Pal/Binaries/Win64/ue4ss/Mods",
           "needs_ue4ss": true,
-          "size_hint_kb": 1200
+          "size_hint_kb": 2200
         },
         "client": {
-          "url": "local://BreedingHelper/client.zip",
-          "extract_to": "Pal/Content/Paks",
-          "files": [
-            "BreedingHelperUI_P.pak"
-          ],
+          "url": "https://raw.githubusercontent.com/gryzzomaoc-afk/palworld-modpack/main/BreedingHelper-client.zip",
+          "extract_to": "Pal/Content/Paks/~mods",
           "needs_ue4ss": false,
           "size_hint_kb": 4100
         }
