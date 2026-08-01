@@ -1,30 +1,88 @@
 {
   "version": 1,
-  "updated": "2026-08-02",
-  "_comment": "friend-allowed mods. Paks mods go in Paks/~mods/ (NOT root).",
+  "updated": "2026-08-01",
   "mods": {
     "BreedingHelper": {
       "name": "BreedingHelper",
       "display_name_zh": "育種助手",
       "category": "breeding",
-      "version": "v1.1",
+      "version": "4341.2.17.0",
       "description_zh": "育種配對計算 + 繁中 UI。給你 parent 算最優 child、染色/IV 鎖定、群組規劃。",
       "tags": [
         "繁中",
         "UI"
       ],
-      "friend_allowed": true,
       "components": {
+        "server": {
+          "url": "local://BreedingHelper/server.zip",
+          "extract_to": "ue4ss/Mods/BreedingHelper",
+          "files": [
+            "Scripts/main.lua",
+            "Scripts/data.lua"
+          ],
+          "needs_ue4ss": true,
+          "size_hint_kb": 1200
+        },
         "client": {
-          "url": "https://raw.githubusercontent.com/gryzzomaoc-afk/palworld-modpack/main/BreedingHelper-client.zip",
-          "extract_to": "Pal/Content/Paks/~mods",
+          "url": "local://BreedingHelper/client.zip",
+          "extract_to": "Pal/Content/Paks",
           "files": [
             "BreedingHelperUI_P.pak"
           ],
           "needs_ue4ss": false,
           "size_hint_kb": 4100
         }
-      }
+      },
+      "friend_allowed": true
+    },
+    "WatchDoS": {
+      "name": "WatchDoS",
+      "display_name_zh": "Watch-DoS 防濫連",
+      "category": "admin",
+      "version": "1.0.0",
+      "description_zh": "監控異常連線，自動封鎖可疑 IP。純 server 端，client 端不用裝。",
+      "tags": [
+        "server-only",
+        "安全"
+      ],
+      "components": {
+        "server": {
+          "url": "local://WatchDoS/server.zip",
+          "extract_to": "watchdog",
+          "files": [
+            "Watch-DoS.ps1"
+          ],
+          "needs_ue4ss": false,
+          "size_hint_kb": 8
+        }
+      },
+      "friend_allowed": false
+    },
+    "WTD": {
+      "name": "WTD",
+      "display_name_zh": "世界樹龍 (WTD)",
+      "category": "gameplay",
+      "version": "0.9.0-rc15",
+      "description_zh": "可騎乘 + 縮小的世界樹龍。Server 跟 client 兩邊都要裝。",
+      "tags": [
+        "server+client",
+        "騎乘"
+      ],
+      "components": {
+        "server": {
+          "url": "https://raw.githubusercontent.com/gryzzomaoc-afk/palworld-modpack/main/WTD-server.zip",
+          "needs_ue4ss": true,
+          "size_hint_kb": 12
+        },
+        "client": {
+          "url": "https://raw.githubusercontent.com/gryzzomaoc-afk/palworld-modpack/main/WorldTreeDragonSuperEvolution-client.zip",
+          "needs_ue4ss": true,
+          "size_hint_kb": 30
+        }
+      },
+      "friend_allowed": true
     }
-  }
+  },
+  "_comment": "Friend-facing mod catalog. friend_allowed: true 為朋友可裝。",
+  "_how_to_use": "1. 上傳到 GitHub public repo\n2. 朋友在 .exe 裡貼 https://raw.githubusercontent.com/USER/REPO/main/friend-catalog.json\n3. 本地測試可用 file:///C:/path/to/friend-catalog.json"
 }
