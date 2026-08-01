@@ -1,0 +1,22 @@
+# Build artifacts
+build/
+build_v*/
+*.spec
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Distribution
+dist/
+
+# Logs
+*.log
+
+# Test drivers
+_test_*.py
+
+# Backups
+*.bak-*/
+*_backup/

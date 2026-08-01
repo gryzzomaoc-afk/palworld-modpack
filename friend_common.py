@@ -1,0 +1,770 @@
+"""Shared backend logic for the friend mod installer.
+
+Used by both friend_gui.py (tkinter) and friend_flet.py (Flet/Flutter).
+NO tkinter, flet, or GUI imports here — pure stdlib only.
+"""
+from __future__ import annotations
+
+import hashlib
+import io
+import json
+import os
+import sys
+import urllib.error
+import urllib.request
+import ssl
+
+try:
+    import certifi
+    _HAS_CERTIFI = True
+except ImportError:
+    _HAS_CERTIFI = False
+
+
+def _make_ssl_context():
+    """SSL context that uses certifi's CA bundle (fixes CERTIFICATE_VERIFY_FAILED on
+    Windows machines where Python's default CA store is missing GitHub's intermediate cert).
+    Falls back to default context if certifi isn't available.
+    """
+    if _HAS_CERTIFI:
+        return ssl.create_default_context(cafile=certifi.where())
+    return ssl.create_default_context()
+import zipfile
+from pathlib import Path
+
+# --- paths & config ---
+APP_DIR = Path(__file__).parent.resolve()
+CONFIG_FILE = Path.home() / ".palworld_friend_tool.json"
+
+
+def _default_catalog_path() -> str:
+    """Default to friend-catalog.json next to the .exe (or this script)."""
+    if getattr(sys, "frozen", False):
+        # pyinstaller / flet onefile: sys.executable is the .exe
+        exe_dir = Path(sys.executable).parent
+    else:
+        exe_dir = Path(__file__).parent.resolve()
+    local = exe_dir / "friend-catalog.json"
+    if local.exists():
+        return local.as_uri()  # file:///C:/...
+    return "https://raw.githubusercontent.com/gryzzomaoc-afk/palworld-modpack/main/friend-catalog.json"
+
+
+DEFAULT_CATALOG_URL = _default_catalog_path()
+
+
+def load_config() -> dict:
+    if CONFIG_FILE.exists():
+        try:
+            return json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    return {"catalog_url": DEFAULT_CATALOG_URL}
+
+
+def save_config(cfg: dict) -> None:
+    try:
+        CONFIG_FILE.write_text(
+            json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+    except Exception as e:
+        print(f"save_config err: {e!r}")
+
+
+# --- Steam / Palworld auto-detect (Windows registry + common paths) ---
+def detect_steam() -> tuple[str | None, str | None]:
+    """Return (steam_path, palworld_path) or (None, None) if not found."""
+    if sys.platform != "win32":
+        return None, None
+
+    steam_root = None
+    try:
+        import winreg
+        for hive, key_path in [
+            (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\WOW6432Node\Valve\Steam"),
+            (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Valve\Steam"),
+        ]:
+            try:
+                with winreg.OpenKey(hive, key_path) as key:
+                    val, _ = winreg.QueryValueEx(key, "InstallPath")
+                    if val and Path(val).exists():
+                        steam_root = val
+                        break
+            except FileNotFoundError:
+                continue
+            except Exception:
+                continue
+    except ImportError:
+        pass
+
+    if not steam_root:
+        for d in [
+            r"C:\Program Files (x86)\Steam",
+            r"C:\Program Files\Steam",
+            r"D:\Steam",
+            r"D:\Program Files (x86)\Steam",
+            r"E:\Steam",
+        ]:
+            if Path(d).exists() and Path(d, "steamapps").exists():
+                steam_root = d
+                break
+
+    if not steam_root:
+        return None, None
+
+    palworld = Path(steam_root) / "steamapps" / "common" / "Palworld"
+    if not palworld.exists():
+        lib_vdf = Path(steam_root) / "steamapps" / "libraryfolders.vdf"
+        if lib_vdf.exists():
+            try:
+                import re
+                text = lib_vdf.read_text(encoding="utf-8", errors="ignore")
+                for m in re.finditer(r'"path"\s+"([^"]+)"', text):
+                    p = Path(m.group(1).replace("\\\\", "\\")) / "steamapps" / "common" / "Palworld"
+                    if p.exists():
+                        palworld = p
+                        break
+            except Exception:
+                pass
+
+    return steam_root, (str(palworld) if palworld.exists() else None)
+
+
+# --- Palworld running check (prevents file lock issues) ---
+def is_palworld_running() -> tuple[bool, list[str]]:
+    """Check if Palworld is currently running.
+
+    Returns (running, [process_names]).
+    Looks for both shipping exe and common related processes.
+    """
+    if sys.platform != "win32":
+        return False, []
+    candidates = ["Palworld-Win64-Shipping", "Palworld", "PalServer"]
+    found = []
+    try:
+        import subprocess  # noqa: F401  (not used directly, kept for future)
+        for name in candidates:
+            # tasklist filter by image name
+            ps_cmd = [
+                "powershell", "-NoProfile", "-Command",
+                f"Get-Process -Name '{name}' -ErrorAction SilentlyContinue | "
+                "Select-Object -ExpandProperty Name"
+            ]
+            r = subprocess.run(ps_cmd, capture_output=True, text=True, timeout=5)
+            for ln in (r.stdout or "").splitlines():
+                ln = ln.strip()
+                if ln:
+                    found.append(ln)
+    except Exception:
+        pass
+    return (len(found) > 0), found
+
+
+def _backup_dir(src: Path, label: str = "") -> Path | None:
+    """Snapshot a directory to <src>.bak-<timestamp> before destructive ops.
+
+    Returns the backup path, or None if src didn't exist.
+    """
+    if not src or not src.exists() or not src.is_dir():
+        return None
+    import shutil
+    from datetime import datetime
+    ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+    suffix = f"-{label}" if label else ""
+    backup = src.with_name(src.name + f".bak-{ts}{suffix}")
+    if backup.exists():
+        # collision: append a counter
+        i = 1
+        while True:
+            cand = src.with_name(src.name + f".bak-{ts}{suffix}-{i}")
+            if not cand.exists():
+                backup = cand
+                break
+            i += 1
+    try:
+        shutil.copytree(src, backup)
+        return backup
+    except Exception:
+        return None
+
+
+# --- Catalog fetch ---
+def fetch_catalog(url: str) -> dict:
+    """Fetch and parse the mod catalog JSON."""
+    req = urllib.request.Request(url, headers={"User-Agent": "PalworldFriendModInstaller/1.0.7"})
+    ctx = _make_ssl_context()
+    try:
+        with urllib.request.urlopen(req, timeout=15, context=ctx) as r:
+            data = r.read()
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"HTTP {e.code}: {e.reason}")
+    except urllib.error.URLError as e:
+        raise RuntimeError(f"URL error: {e.reason}")
+    return json.loads(data.decode("utf-8"))
+
+
+# --- UE4SS prereq (Okaetsu RE-UE4SS for Palworld) ---
+UE4SS_URL = "https://github.com/Okaetsu/RE-UE4SS/releases/download/experimental-palworld/UE4SS-Palworld.zip"
+
+
+def check_ue4ss(palworld_path: str) -> dict:
+    """Check if RE-UE4SS is installed.
+
+    Looks in multiple common locations (Okaetsu default + direct + root):
+      1. <pal>/Pal/Binaries/Win64/ue4ss/UE4SS.dll  (Okaetsu RE-UE4SS)
+      2. <pal>/Pal/Binaries/Win64/UE4SS.dll         (direct extract)
+      3. <pal>/Pal/Binaries/Win64/ue4ss/UE4SS.pak
+      4. <pal>/Pal/Binaries/Win64/UE4SS.pak
+      5. <pal>/ue4ss/UE4SS.dll                      (root variant)
+    """
+    out = {
+        "installed": False,
+        "found_path": None,
+        "marker": None,
+        "checked": [],
+        "error": None,
+    }
+    if not palworld_path:
+        out["error"] = "no palworld path"
+        return out
+
+    pp = Path(palworld_path)
+    win64 = pp / "Pal" / "Binaries" / "Win64"
+    candidates = [
+        (win64 / "ue4ss" / "UE4SS.dll", "Pal/Binaries/Win64/ue4ss/UE4SS.dll (Okaetsu)"),
+        (win64 / "UE4SS.dll", "Pal/Binaries/Win64/UE4SS.dll"),
+        (win64 / "ue4ss" / "UE4SS.pak", "Pal/Binaries/Win64/ue4ss/UE4SS.pak"),
+        (win64 / "UE4SS.pak", "Pal/Binaries/Win64/UE4SS.pak"),
+        (pp / "ue4ss" / "UE4SS.dll", "ue4ss/UE4SS.dll (root)"),
+    ]
+    for path, desc in candidates:
+        out["checked"].append({"path": str(path), "desc": desc, "exists": path.exists()})
+        if path.exists():
+            out["installed"] = True
+            out["found_path"] = str(path.parent)
+            out["marker"] = path.name
+            return out
+    return out
+
+
+def check_ue4ss_health(palworld_path: str) -> dict:
+    """Comprehensive UE4SS health check (for Okaetsu RE-UE4SS layout).
+
+    Goes beyond check_ue4ss (which only finds UE4SS.dll) and verifies that
+    all expected files are in the right places. A "UE4SS.dll is present" result
+    from check_ue4ss can still mean UE4SS won't work for mods (e.g. missing
+    UEHelpers.lua, missing zip-extracted Mods/, or UE4SS-settings.ini with
+    EnableMods=false). Friend installer calls this after install_ue4ss to
+    confirm the install actually took.
+
+    Returns:
+      {
+        "ok": bool,                  # True if all required files present
+        "issues": [str],             # human-readable problems found
+        "checks": [{name, path, ok, detail}],  # per-file results
+        "dll_path": str|None,        # resolved UE4SS.dll location
+        "mods_path": str|None,       # resolved Mods/ location
+      }
+    """
+    out = {
+        "ok": False,
+        "issues": [],
+        "checks": [],
+        "dll_path": None,
+        "mods_path": None,
+    }
+    if not palworld_path:
+        out["issues"].append("no palworld path")
+        return out
+
+    base = check_ue4ss(palworld_path)
+    if not base.get("installed"):
+        out["issues"].append("UE4SS.dll not found in any standard location")
+        out["checks"].extend([
+            {"name": c["desc"], "path": c["path"], "ok": c["exists"]}
+            for c in base.get("checked", [])
+        ])
+        return out
+
+    # UE4SS.dll is there; check the rest of the layout relative to it.
+    # Okaetsu's standard layout: UE4SS.dll sits at <...>/ue4ss/, with Mods/
+    # and UE4SS-settings.ini as siblings.
+    ue4ss_dir = Path(base["found_path"])
+    out["dll_path"] = str(ue4ss_dir / base["marker"])
+    out["mods_path"] = str(ue4ss_dir / "Mods")
+
+    expected = [
+        (ue4ss_dir / "UE4SS.dll",         "UE4SS.dll",             "required"),
+        (ue4ss_dir / "UE4SS-settings.ini", "UE4SS-settings.ini",    "required"),
+        (ue4ss_dir / "Mods",               "Mods/",                 "required"),
+        (ue4ss_dir / "Mods" / "shared" / "UEHelpers" / "UEHelpers.lua",
+         "Mods/shared/UEHelpers/UEHelpers.lua", "required"),
+        (ue4ss_dir / "Mods" / "mods.txt",  "Mods/mods.txt",         "optional"),
+    ]
+    for path, name, severity in expected:
+        ok = path.exists()
+        out["checks"].append({
+            "name": name,
+            "path": str(path),
+            "ok": ok,
+            "severity": severity,
+        })
+        if not ok and severity == "required":
+            out["issues"].append(f"missing required file: {name} ({path})")
+
+    out["ok"] = not any(
+        not c["ok"] and c.get("severity") == "required"
+        for c in out["checks"]
+    )
+    return out
+
+
+def verify_mod_install(mod: dict, palworld_path: str) -> dict:
+    """Verify an installed mod matches the catalog expectations.
+
+    For each component (server / client), checks that the files listed in
+    catalog `files` exist on disk at the expected location. Does NOT verify
+    per-file SHA256 (catalog only has zip-level SHA256, not per-file).
+
+    Returns:
+      {
+        "ok": bool,
+        "components": {role: {ok, files, issues}},
+      }
+    """
+    out = {"ok": True, "components": {}}
+    for role, comp in (mod.get("components") or {}).items():
+        per_role = {"ok": True, "files": [], "issues": []}
+        needs_ue4ss = comp.get("needs_ue4ss", True)
+        files = comp.get("files") or []
+
+        if needs_ue4ss:
+            mod_name = mod.get("name", "unknown")
+            target_dir = Path(palworld_path) / "Pal" / "Binaries" / "Win64" / "ue4ss" / "Mods" / mod_name
+        else:
+            target_dir = Path(palworld_path) / "Pal" / "Content" / "Paks" / "~mods"
+
+        for f in files:
+            # 'Scripts/main.lua' -> target_dir / Scripts / main.lua
+            # 'BreedingHelperUI_P.pak' -> target_dir / BreedingHelperUI_P.pak
+            parts = f.replace("\\", "/").split("/")
+            if not needs_ue4ss:
+                parts = [parts[-1]]  # client: flatten (only top-level .pak)
+            fpath = target_dir.joinpath(*parts)
+            entry = {
+                "file": f,
+                "path": str(fpath),
+                "exists": fpath.exists(),
+            }
+            if fpath.exists():
+                entry["size"] = fpath.stat().st_size
+            else:
+                per_role["issues"].append(f"{f} not found at {fpath}")
+                per_role["ok"] = False
+            per_role["files"].append(entry)
+
+        if not per_role["ok"]:
+            out["ok"] = False
+        out["components"][role] = per_role
+    return out
+
+
+def _parse_mods_txt(text: str) -> tuple[dict, list]:
+    """Parse mods.txt: return ({name: val}, [comments])."""
+    entries = {}
+    comments = []
+    for line in text.splitlines():
+        s = line.strip()
+        if not s:
+            continue
+        if s.startswith(";"):
+            comments.append(line)
+            continue
+        if ":" in s:
+            name, _, val = s.partition(":")
+            entries[name.strip()] = val.strip()
+    return entries, comments
+
+
+def _merge_mods_txt(mods_txt: Path, original_text: str) -> None:
+    """Merge original mod entries (user customizations) into zip's built-in mods.txt.
+
+    Logic: union of (zip's current built-in entries) + (original custom entries).
+    For the 8 built-in mod names, zip's value wins (zip is authoritative for built-ins).
+    """
+    zip_entries, zip_comments = _parse_mods_txt(
+        mods_txt.read_text(encoding="utf-8", errors="replace")
+    )
+    orig_entries, orig_comments = _parse_mods_txt(original_text)
+
+    # Start with original (preserves user customizations like WTDScaler, PalToolkit, etc.)
+    merged = dict(orig_entries)
+    # Overlay zip's built-in 8 (zip is authoritative for built-ins; values typically same anyway)
+    for name, val in zip_entries.items():
+        merged[name] = val
+
+    # Reconstruct
+    lines = list(dict.fromkeys(zip_comments + orig_comments))  # dedupe comments, keep order
+    for name, val in merged.items():
+        lines.append(f"{name} : {val}")
+    mods_txt.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def install_ue4ss(palworld_path: str) -> tuple[bool, str]:
+    """Download Okaetsu RE-UE4SS for Palworld and extract to Palworld's Win64/.
+
+    Preserves any user-customized entries in <win64>/ue4ss/Mods/mods.txt
+    (e.g. WTDScaler, PalToolkit, WorldTreeDragonSuperEvolution, etc.) by
+    snapshotting the file before extraction and merging back the custom
+    entries after. This prevents the zip's built-in 8 entries from
+    clobbering server-side custom mods.
+
+    Also backs up the existing ue4ss/ folder to ue4ss.bak-<ts>/ before
+    extraction so the user can rollback if something goes wrong.
+    Aborts with a clear message if Palworld is currently running (would
+    lock UE4SS.dll + mods).
+    """
+    # Refuse if Pal is running (would lock .dll + .pak)
+    running, names = is_palworld_running()
+    if running:
+        return False, (
+            f"Palworld 正在執行（{', '.join(names)}），請先完整關閉遊戲再裝 UE4SS。"
+            f"沒關的話 .dll 會被 lock、安裝完也無法生效。"
+        )
+
+    try:
+        req = urllib.request.Request(UE4SS_URL, headers={"User-Agent": "PalworldFriendModInstaller/1.0"})
+        ctx = _make_ssl_context()
+        with urllib.request.urlopen(req, timeout=180, context=ctx) as r:
+            data = r.read()
+    except Exception as e:
+        return False, f"download failed: {e}"
+    try:
+        target_base = Path(palworld_path) / "Pal" / "Binaries" / "Win64"
+        ue4ss_dir = target_base / "ue4ss"
+        mods_txt = ue4ss_dir / "Mods" / "mods.txt"
+
+        # Backup existing ue4ss/ folder (whole tree) so user can rollback
+        backup_path = None
+        if ue4ss_dir.exists():
+            backup_path = _backup_dir(ue4ss_dir, label="pre-install")
+        backup_msg = f"（舊版備份到 {backup_path.name}\\）" if backup_path else ""
+
+        # Snapshot existing mods.txt (if any) so we can preserve user customizations
+        original_mods_txt = None
+        if mods_txt.exists():
+            original_mods_txt = mods_txt.read_text(encoding="utf-8", errors="replace")
+
+        with zipfile.ZipFile(io.BytesIO(data)) as zf:
+            zf.extractall(target_base)
+
+        # Merge built-in (from zip) + custom (from snapshot)
+        if original_mods_txt is not None and mods_txt.exists():
+            _merge_mods_txt(mods_txt, original_mods_txt)
+
+        # Verify install actually took (catches silent layout breakage — e.g.
+        # zip structure changed, UEHelpers.lua missing, etc.)
+        health = check_ue4ss_health(palworld_path)
+        if not health["ok"]:
+            issues = "; ".join(health["issues"])
+            # Auto-rollback: restore from backup so user isn't stuck
+            rollback_msg = ""
+            if backup_path and backup_path.exists():
+                import shutil
+                if ue4ss_dir.exists():
+                    shutil.rmtree(ue4ss_dir, ignore_errors=True)
+                shutil.copytree(backup_path, ue4ss_dir)
+                rollback_msg = f"（已從備份還原: {backup_path.name}）"
+            return False, (
+                f"extract 完成但 layout 驗證失敗 ({issues}) {rollback_msg}。"
+                f"請回報這個錯誤給工具維護者。"
+            )
+
+        msg = f"已安裝至 {target_base}\\ue4ss\\ {backup_msg}"
+        return True, msg
+    except Exception as e:
+        return False, f"extract failed: {e}"
+
+
+def uninstall_ue4ss(palworld_path: str) -> tuple[bool, str]:
+    """Remove UE4SS install: ue4ss/ dir + the zip-root dwmapi.dll in Win64/.
+
+    The Okaetsu RE-UE4SS zip extracts two top-level entries: `dwmapi.dll`
+    (sits at Win64/ root) and `ue4ss/...` (subdir). Removing only ue4ss/
+    leaves a stale dwmapi.dll that conflicts on reinstall.
+
+    Backs up the existing ue4ss/ folder to ue4ss.bak-<ts>/ first.
+    Aborts if Palworld is running.
+    """
+    if not palworld_path:
+        return False, "no palworld path"
+    import shutil
+    target_base = Path(palworld_path) / "Pal" / "Binaries" / "Win64"
+    ue4ss_dir = target_base / "ue4ss"
+    if not ue4ss_dir.exists():
+        return False, f"not installed at {ue4ss_dir}"
+
+    # Refuse if Pal is running
+    running, names = is_palworld_running()
+    if running:
+        return False, (
+            f"Palworld 正在執行（{', '.join(names)}），請先完整關閉遊戲再卸載 UE4SS。"
+        )
+
+    # Backup before destroying
+    backup = _backup_dir(ue4ss_dir, label="pre-uninstall")
+    backup_msg = f"（已備份到 {backup.name}\\）" if backup else ""
+
+    try:
+        shutil.rmtree(ue4ss_dir, ignore_errors=True)
+        # also remove zip-root dwmapi.dll (lives in Win64/, not under ue4ss/)
+        dwmapi = target_base / "dwmapi.dll"
+        if dwmapi.exists():
+            try:
+                dwmapi.unlink()
+            except Exception:
+                pass
+        return True, f"removed {ue4ss_dir} {backup_msg}"
+    except Exception as e:
+        return False, f"uninstall failed: {e}"
+
+
+# --- Install / Uninstall mods ---
+def _resolve_target_dir(comp: dict, palworld_path: str) -> Path:
+    """Where to extract a single component."""
+    if comp.get("needs_ue4ss", True):
+        return Path(palworld_path) / "Pal" / "Binaries" / "Win64" / "ue4ss" / "Mods"
+    return Path(palworld_path) / "Pal" / "Content" / "Paks" / "~mods"
+
+
+def _install_component(mod: dict, comp: dict, palworld_path: str, role: str) -> tuple[bool, str]:
+    """Install ONE component (server or client). Returns (success, message)."""
+    url = comp.get("url", "").strip()
+    if not url:
+        return False, f"{role}: no URL"
+
+    # Refuse if Pal is running (would lock .pak / .dll mid-write)
+    running, names = is_palworld_running()
+    if running:
+        return False, (
+            f"{role}: Palworld 正在執行（{', '.join(names)}），"
+            f"請先完整關閉遊戲再裝 mod。"
+        )
+
+    target_dir = _resolve_target_dir(comp, palworld_path)
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "PalworldFriendModInstaller/1.0.7"})
+        ctx = _make_ssl_context()
+        with urllib.request.urlopen(req, timeout=60, context=ctx) as r:
+            data = r.read()
+    except Exception as e:
+        return False, f"{role}: download failed: {e}"
+
+    # SHA256 verification (defends against MITM, file corruption, malicious fork).
+    # If the catalog entry has a `sha256` field, we verify the downloaded bytes
+    # match before doing any extraction. Mismatch -> abort.
+    expected_sha = (comp.get("sha256") or "").strip().lower()
+    if expected_sha:
+        actual_sha = hashlib.sha256(data).hexdigest().lower()
+        if actual_sha != expected_sha:
+            return False, (
+                f"{role}: SHA256 mismatch (file may be corrupted, MITM'd, "
+                f"or catalog is out of date). "
+                f"expected={expected_sha[:16]}... actual={actual_sha[:16]}..."
+            )
+
+    try:
+        backup_msg = ""  # used by both server and client branches below
+        with zipfile.ZipFile(io.BytesIO(data)) as zf:
+            if comp.get("needs_ue4ss", True):
+                import shutil
+                mod_name = mod.get("name", "unknown")
+                target_root = target_dir / mod_name
+                tmp_root = target_dir / f".{mod_name}_extract_tmp"
+
+                # Backup existing mod folder so user can rollback if they
+                # had any custom-patched files (e.g. server-side Lua overrides)
+                backup_msg = ""
+                if target_root.exists():
+                    backup = _backup_dir(target_root, label=f"pre-{role}")
+                    if backup:
+                        backup_msg = f"（舊版備份到 {backup.name}\\）"
+
+                # Clean any prior tmp + target
+                if tmp_root.exists():
+                    shutil.rmtree(tmp_root, ignore_errors=True)
+                if target_root.exists():
+                    shutil.rmtree(target_root, ignore_errors=True)
+                tmp_root.mkdir(parents=True, exist_ok=True)
+                zf.extractall(tmp_root)
+
+                # Strip wrapper: if zip has a single top-level dir matching mod_name,
+                # move its children up to target_root (this is the BREEDING HELPER shape:
+                # zip root contains "BreedingHelper/Scripts/main.lua" + "BreedingHelper/enabled.txt")
+                top = [p for p in tmp_root.iterdir() if not p.name.startswith(".")]
+                if (len(top) == 1
+                        and top[0].is_dir()
+                        and top[0].name == mod_name):
+                    inner = top[0]
+                    inner.rename(target_root)
+                else:
+                    # No wrapper — just rename tmp dir to target
+                    tmp_root.rename(target_root)
+
+                # Cleanup leftover tmp (if rename target was already gone)
+                if tmp_root.exists() and tmp_root != target_root:
+                    shutil.rmtree(tmp_root, ignore_errors=True)
+
+                # Ensure enabled.txt exists
+                et = target_root / "enabled.txt"
+                if not et.exists():
+                    et.write_bytes(b"")
+
+                # UE4SS reads mods.txt at <win64>/ue4ss/Mods/mods.txt (NOT ue4ss/mods.txt)
+                mods_txt = target_dir / "mods.txt"
+                if mods_txt.exists():
+                    txt = mods_txt.read_text(encoding="utf-8", errors="replace")
+                    entry = f"{mod_name} : 1"
+                    if entry not in txt and f"{mod_name}: 1" not in txt:
+                        with open(mods_txt, "a", encoding="utf-8") as f:
+                            f.write("\n" + entry + "\n")
+            else:
+                for info in zf.infolist():
+                    if info.is_dir():
+                        continue
+                    name = info.filename.replace("\\", "/")
+                    if name.startswith("../") or "/../" in name:
+                        continue
+                    fname = name.split("/")[-1]
+                    out_path = target_dir / fname
+                    out_path.parent.mkdir(parents=True, exist_ok=True)
+                    with zf.open(info) as src, open(out_path, "wb") as dst:
+                        dst.write(src.read())
+        return True, f"{role}: installed to {target_dir if not comp.get('needs_ue4ss', True) else (target_dir / mod_name)} {backup_msg}".rstrip()
+    except Exception as e:
+        return False, f"{role}: install failed: {e}"
+
+
+def _uninstall_component(mod: dict, comp: dict, palworld_path: str, role: str) -> tuple[bool, str]:
+    """Uninstall ONE component. Returns (success, message)."""
+    if comp.get("needs_ue4ss", True):
+        target_dir = Path(palworld_path) / "Pal" / "Binaries" / "Win64" / "ue4ss" / "Mods"
+        mod_name = mod.get("name", "unknown")
+        mod_root = target_dir / mod_name
+        if not mod_root.exists():
+            return False, f"{role}: not installed at {mod_root}"
+        try:
+            import shutil
+            shutil.rmtree(mod_root, ignore_errors=True)
+            # UE4SS reads mods.txt at <win64>/ue4ss/Mods/mods.txt (NOT ue4ss/mods.txt)
+            mods_txt = target_dir / "mods.txt"
+            if mods_txt.exists():
+                txt = mods_txt.read_text(encoding="utf-8", errors="replace")
+                lines = [
+                    ln for ln in txt.splitlines()
+                    if ln.strip().split(":")[0].strip() != mod_name
+                ]
+                mods_txt.write_text("\n".join(lines) + "\n", encoding="utf-8")
+            return True, f"{role}: removed {mod_root}"
+        except Exception as e:
+            return False, f"{role}: uninstall failed: {e}"
+    files = comp.get("files", [])
+    removed = 0
+    for f in files:
+        fname = f.split("/")[-1]
+        for d in [
+            Path(palworld_path) / "Pal" / "Content" / "Paks" / "~mods",
+            Path(palworld_path) / "Pal" / "Content" / "Paks",
+        ]:
+            p = d / fname
+            if p.exists():
+                try:
+                    p.unlink()
+                    removed += 1
+                except Exception:
+                    pass
+    if removed:
+        return True, f"{role}: removed {removed} files"
+    return False, f"{role}: no files found"
+
+
+def _is_component_installed(comp: dict, palworld_path: str, mod_name: str) -> bool:
+    """Check if a single component is installed."""
+    if comp.get("needs_ue4ss", True):
+        target = Path(palworld_path) / "Pal" / "Binaries" / "Win64" / "ue4ss" / "Mods" / mod_name
+        return target.exists()
+    candidates = [
+        Path(palworld_path) / "Pal" / "Content" / "Paks" / "~mods",
+        Path(palworld_path) / "Pal" / "Content" / "Paks",
+    ]
+    for f in comp.get("files", []):
+        fname = f.split("/")[-1]
+        for d in candidates:
+            if (d / fname).exists():
+                return True
+    return False
+
+
+def install_mod(mod: dict, palworld_path: str) -> tuple[bool, str]:
+    """Install a mod: BOTH server AND client components if both exist.
+
+    Returns (success, message). If all components succeed, returns True with
+    a combined summary. If at least one succeeds, returns True with details
+    on what failed. If all fail, returns False.
+    """
+    comps = mod.get("components", {})
+    if not comps:
+        return False, "no components"
+
+    results = []
+    for role, comp in comps.items():
+        ok, msg = _install_component(mod, comp, palworld_path, role)
+        results.append((role, ok, msg))
+
+    succeeded = [r[0] for r in results if r[1]]
+    failed = [(r[0], r[2]) for r in results if not r[1]]
+
+    if not succeeded:
+        return False, "; ".join(r[1] for r in failed)
+
+    summary = f"{', '.join(succeeded)} installed"
+    if failed:
+        summary += f" (failed: {', '.join(r[0] for r in failed)})"
+    return True, summary
+
+
+def uninstall_mod(mod: dict, palworld_path: str) -> tuple[bool, str]:
+    """Uninstall a mod: BOTH server AND client components if both exist.
+
+    A component that wasn't installed is treated as a no-op (not a failure).
+    """
+    comps = mod.get("components", {})
+    if not comps:
+        return False, "no components"
+
+    results = []
+    for role, comp in comps.items():
+        ok, msg = _uninstall_component(mod, comp, palworld_path, role)
+        results.append((role, ok, msg))
+
+    succeeded = [r[0] for r in results if r[1]]
+    if not succeeded:
+        return False, "nothing to remove"
+
+    return True, f"{', '.join(succeeded)} removed"
+
+
+def is_mod_installed(mod: dict, palworld_path: str) -> bool:
+    """Check if a mod is fully installed: ALL components must be present."""
+    if not palworld_path:
+        return False
+    comps = mod.get("components", {})
+    if not comps:
+        return False
+    mod_name = mod.get("name", "unknown")
+    for role, comp in comps.items():
+        if not _is_component_installed(comp, palworld_path, mod_name):
+            return False
+    return True
