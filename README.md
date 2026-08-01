@@ -8,6 +8,8 @@
 
 從右邊 [Releases](../../releases) 頁面下載最新版的 `PalworldFriendModInstaller.exe`，雙擊執行即可。
 
+> 📖 **完整使用教學**：[USAGE.md](USAGE.md) — 含截圖位置、疑難排解（裝完沒效果、URL UNKNOWN 等）
+
 ## 使用步驟
 
 1. **跑起來**：雙擊 `PalworldFriendModInstaller.exe`
