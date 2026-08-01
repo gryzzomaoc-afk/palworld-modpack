@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "updated": "2026-08-02",
+  "_comment": "Friend-facing mod catalog. friend_allowed: true 為朋友可裝。",
+  "mods": {
+    "BreedingHelper": {
+      "name": "BreedingHelper",
+      "display_name_zh": "育種助手",
+      "category": "breeding",
+      "version": "v1.1",
+      "description_zh": "育種配對計算 + 繁中 UI。給你 parent 算最優 child、染色/IV 鎖定、群組規劃。",
+      "tags": [
+        "繁中",
+        "UI"
+      ],
+      "friend_allowed": true,
+      "components": {
+        "client": {
+          "url": "https://raw.githubusercontent.com/gryzzomaoc-afk/palworld-modpack/main/BreedingHelper-client.zip",
+          "extract_to": "Pal/Content/Paks",
+          "files": [
+            "BreedingHelperUI_P.pak"
+          ],
+          "needs_ue4ss": false,
+          "size_hint_kb": 4100
+        }
+      }
+    },
+    "WorldTreeDragonSuperEvolution": {
+      "name": "WorldTreeDragonSuperEvolution",
+      "display_name_zh": "世界樹龍 (WTD) - 客戶端",
+      "category": "gameplay",
+      "version": "v0.9.0-rc15",
+      "description_zh": "可騎乘 + 縮小的世界樹龍（客戶端）。需要 server 也裝 WTDForceAll + WTDScaler 才能看到效果。",
+      "tags": [
+        "騎乘",
+        "client+server"
+      ],
+      "friend_allowed": true,
+      "components": {
+        "client": {
+          "url": "https://raw.githubusercontent.com/gryzzomaoc-afk/palworld-modpack/main/WorldTreeDragonSuperEvolution-client.zip",
+          "extract_to": "Pal/Binaries/Win64/ue4ss/Mods/WorldTreeDragonSuperEvolution",
+          "files": [
+            "Scripts/main.lua"
+          ],
+          "needs_ue4ss": true,
+          "size_hint_kb": 100
+        }
+      }
+    }
+  }
+}
