@@ -1,0 +1,38 @@
+{
+  "name": "BreedingHelper",
+  "display_name_zh": "育種助手",
+  "version": "v1.1+v2",
+  "category": "breeding",
+  "description_zh": "育種配對計算 + 繁中 UI。給你 parent 算最優 child、染色/IV 鎖定、群組規劃。v2 修了 F8 在 dedicated server crash 的問題（try_hook_widget_tick 跳過 RegisterHook，靠 LoopAsync fallback 跑 heartbeat）。",
+  "tags": [
+    "繁中",
+    "UI"
+  ],
+  "friend_allowed": true,
+  "source": "CrazyChips custom build v1.1+v2 (upstream https://space.bilibili.com/26786884, patched by CrazyChips/Mavis)",
+  "components": {
+    "server": {
+      "zip": "server.zip",
+      "extract_to": "Pal/Binaries/Win64/ue4ss/Mods",
+      "needs_ue4ss": true,
+      "size_hint_kb": 653,
+      "files": [
+        "Scripts/main.lua",
+        "Scripts/data.lua"
+      ],
+      "sha256": "c889283678b1c1d3d0281b746cd748880b1097ab194ddd14fd78c0b552155bc7",
+      "_note": "Lua scripts patched by CrazyChips to hide BtnAuthor, TitleText, system messages"
+    },
+    "client": {
+      "zip": "client.zip",
+      "extract_to": "Pal/Content/Paks/~mods",
+      "needs_ue4ss": false,
+      "size_hint_kb": 858,
+      "files": [
+        "BreedingHelperUI_P.pak"
+      ],
+      "sha256": "1dcd49388d78cdfcd25016c7cea881662ffc294be6348f0cafa2a57ba8a7c424",
+      "_note": "BreedingHelperUI_P.pak is identical to upstream (patches are lua-side, not UI assets)"
+    }
+  }
+}

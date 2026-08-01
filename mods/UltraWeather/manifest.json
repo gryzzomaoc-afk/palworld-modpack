@@ -1,0 +1,29 @@
+{
+  "name": "UltraWeather",
+  "display_name_zh": "極致天氣",
+  "version": "1.0.1",
+  "category": "visual",
+  "description_zh": "進階天氣 / 天空系統 — 體積雲、霧色、天空時程表、post-process 覆寫。Client-only（需要 local player controller + viewport，dedicated server 不適用）。",
+  "tags": [
+    "天氣",
+    "視覺",
+    "客戶端"
+  ],
+  "friend_allowed": true,
+  "source": "Ultra Weather 1.0.1 by Fr4nsson (Steam workshop 4504, 2026-07-29)",
+  "components": {
+    "client": {
+      "zip": "client.zip",
+      "extract_to": "Pal/Binaries/Win64/ue4ss/Mods",
+      "needs_ue4ss": true,
+      "size_hint_kb": 33,
+      "files": [
+        "Scripts/main.lua",
+        "config.lua",
+        "enabled.txt"
+      ],
+      "sha256": "a5734597851f3b57e4c0a8a834d53144157f7ba2a97e1223ea060e112a97100e",
+      "_note": "UE4SS Lua mod. Client-only (uses IsLocalPlayerController + viewport world checks; refuses to run on dedicated server)."
+    }
+  }
+}

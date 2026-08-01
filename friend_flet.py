@@ -23,6 +23,7 @@ from friend_common import (
     detect_steam, fetch_catalog,
     check_ue4ss, check_ue4ss_health, install_ue4ss, uninstall_ue4ss,
     install_mod, uninstall_mod, is_mod_installed, verify_mod_install,
+    fetch_mods_from_github, GITHUB_DISCOVERY_SCHEME,
     UE4SS_URL,
 )
 
@@ -376,7 +377,17 @@ def main(page: ft.Page):
 
         def work():
             try:
-                cat = fetch_catalog(url)
+                # v1.0.8+: GitHub folder-discovery pipeline.  When the
+                # default URL is the GITHUB_DISCOVERY_SCHEME sentinel
+                # (or a user-pinned value matches it), call
+                # fetch_mods_from_github() instead of fetching a single
+                # friend-catalog.json.  Custom file:// or http(s):// URLs
+                # still fall through to fetch_catalog() so forks / local
+                # tests keep working.
+                if url.startswith(GITHUB_DISCOVERY_SCHEME):
+                    cat = fetch_mods_from_github()
+                else:
+                    cat = fetch_catalog(url)
                 state["catalog"] = cat
                 mods = cat.get("mods", {}) if isinstance(cat, dict) else {}
                 state["syncing"] = False

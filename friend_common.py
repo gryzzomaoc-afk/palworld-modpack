@@ -38,13 +38,18 @@ CONFIG_FILE = Path.home() / ".palworld_friend_tool.json"
 
 
 def _default_catalog_path() -> str:
-    """Default to friend-catalog.json bundled with the tool.
+    """Default mod source for the friend installer.
 
-    Resolution order (first hit wins):
-      1. sys._MEIPASS/friend-catalog.json   — PyInstaller/Flet onefile bundled path
-      2. <exe-dir>/friend-catalog.json      — next to the .exe (sys.executable)
-      3. <script-dir>/friend-catalog.json    — source-tree run (python friend_flet.py)
-      4. GitHub raw URL                      — last-resort fetch from the public repo
+    v1.0.8+ uses GitHub folder-discovery: each mod lives in
+    `mods/<name>/manifest.json` and the installer lists the directory via
+    the GitHub API.  Returning the `GITHUB_DISCOVERY_SCHEME` sentinel here
+    tells the UI to call `fetch_mods_from_github()` instead of
+    `fetch_catalog(url)`.
+
+    For custom catalogs (e.g. a fork, a local file), drop a
+    `friend-catalog.json` next to the .exe (or in PyInstaller's _MEIPASS)
+    and that file:// URL will take precedence — useful for testing before
+    pushing a manifest update.
     """
     candidates: list[Path] = []
     if getattr(sys, "frozen", False):
@@ -59,7 +64,8 @@ def _default_catalog_path() -> str:
     for c in candidates:
         if c.exists():
             return c.as_uri()  # file:///C:/...
-    return "https://raw.githubusercontent.com/gryzzomaoc-afk/palworld-modpack/main/friend-catalog.json"
+    # No local override -> use the repo-driven discovery pipeline.
+    return GITHUB_DISCOVERY_SCHEME
 
 
 DEFAULT_CATALOG_URL = _default_catalog_path()
@@ -216,6 +222,127 @@ def fetch_catalog(url: str) -> dict:
     # was saved with one (common when using Windows tools like PowerShell's
     # Set-Content -Encoding UTF8, which prepends a BOM by default).
     return json.loads(data.decode("utf-8-sig"))
+
+
+# --- GitHub repo-driven mod discovery (v1.0.8+) ---
+# Each mod lives in `mods/<name>/` with a `manifest.json` and one or more
+# `*.zip` files referenced by the manifest.  Installer uses the GitHub API
+# to list the `mods/` directory, then downloads each manifest, then
+# assembles the same dict shape that `fetch_catalog()` returns so the
+# rest of the codebase (install / uninstall / UI) doesn't need to change.
+GITHUB_REPO = "gryzzomaoc-afk/palworld-modpack"
+GITHUB_BRANCH = "main"
+GITHUB_MODS_SUBDIR = "mods"
+
+
+def _github_raw_url(path: str) -> str:
+    return f"https://raw.githubusercontent.com/{GITHUB_REPO}/{GITHUB_BRANCH}/{path.lstrip('/')}"
+
+
+def _github_api_url(path: str) -> str:
+    return f"https://api.github.com/repos/{GITHUB_REPO}/contents/{path.lstrip('/')}"
+
+
+def _github_get_json(url: str, timeout: int = 15) -> dict | list:
+    """GET a JSON document from a GitHub URL. Raises RuntimeError on failure."""
+    req = urllib.request.Request(url, headers={
+        "User-Agent": "PalworldFriendModInstaller/1.0.8",
+        "Accept": "application/vnd.github+json",
+    })
+    ctx = _make_ssl_context()
+    try:
+        with urllib.request.urlopen(req, timeout=timeout, context=ctx) as r:
+            data = r.read()
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"GitHub API HTTP {e.code}: {e.reason} (url={url})")
+    except urllib.error.URLError as e:
+        raise RuntimeError(f"GitHub API URL error: {e.reason} (url={url})")
+    return json.loads(data.decode("utf-8-sig"))
+
+
+def _resolve_component_url(mod_name: str, comp: dict) -> dict:
+    """Turn a component's `zip` filename into a full raw.githubusercontent.com URL.
+
+    Mutates and returns the component dict.
+    """
+    zip_name = (comp.get("zip") or "").strip()
+    if not zip_name:
+        raise RuntimeError(f"mod {mod_name!r} component has no 'zip' field")
+    comp["url"] = _github_raw_url(f"{GITHUB_MODS_SUBDIR}/{mod_name}/{zip_name}")
+    return comp
+
+
+def fetch_mods_from_github() -> dict:
+    """Discover mods by listing `mods/` in the GitHub repo.
+
+    Returns a dict in the same shape as the old `friend-catalog.json`:
+      {"version": int, "updated": str, "mods": {<name>: <manifest>}}
+
+    Only mods with `"friend_allowed": true` in their manifest are returned.
+    """
+    listing = _github_get_json(_github_api_url(GITHUB_MODS_SUBDIR))
+    if not isinstance(listing, list):
+        raise RuntimeError(
+            f"GitHub API returned unexpected payload for "
+            f"{GITHUB_MODS_SUBDIR!r} (expected directory listing)"
+        )
+
+    mods: dict = {}
+    skipped: list = []
+    for entry in listing:
+        if entry.get("type") != "dir":
+            continue
+        mod_name = entry.get("name") or ""
+        if not mod_name or mod_name.startswith("."):
+            continue
+        manifest_url = _github_raw_url(f"{GITHUB_MODS_SUBDIR}/{mod_name}/manifest.json")
+        try:
+            req = urllib.request.Request(manifest_url, headers={
+                "User-Agent": "PalworldFriendModInstaller/1.0.8",
+            })
+            ctx = _make_ssl_context()
+            with urllib.request.urlopen(req, timeout=15, context=ctx) as r:
+                data = r.read()
+            manifest = json.loads(data.decode("utf-8-sig"))
+        except Exception as e:
+            skipped.append({"name": mod_name, "reason": f"manifest fetch failed: {e}"})
+            continue
+        if not isinstance(manifest, dict):
+            skipped.append({"name": mod_name, "reason": "manifest is not a JSON object"})
+            continue
+        # Confirm name matches the folder; if not, prefer the folder name to
+        # keep the on-disk install path stable.
+        manifest["name"] = manifest.get("name") or mod_name
+        if not manifest.get("friend_allowed", False):
+            skipped.append({"name": mod_name, "reason": "friend_allowed=false"})
+            continue
+        if not manifest.get("components"):
+            skipped.append({"name": mod_name, "reason": "no components in manifest"})
+            continue
+        # Resolve each component's `zip` filename to a full raw.githubusercontent.com URL
+        for role, comp in list(manifest.get("components", {}).items()):
+            try:
+                _resolve_component_url(mod_name, comp)
+            except Exception as e:
+                skipped.append({"name": mod_name, "reason": f"component {role!r}: {e}"})
+                break
+        else:
+            mods[mod_name] = manifest
+
+    return {
+        "version": 3,
+        "updated": "auto",
+        "source": f"github:{GITHUB_REPO}@{GITHUB_BRANCH}/{GITHUB_MODS_SUBDIR}/",
+        "mods": mods,
+        "_skipped": skipped,
+    }
+
+
+# Sentinel used by `_default_catalog_path()` to indicate "use the GitHub
+# folder-discovery pipeline". The UI code treats any URL starting with
+# the literal GITHUB_DISCOVERY_SCHEME as a request to call
+# `fetch_mods_from_github()` instead of `fetch_catalog(url)`.
+GITHUB_DISCOVERY_SCHEME = "github://gryzzomaoc-afk/palworld-modpack/main/mods"
 
 
 # --- UE4SS prereq (Okaetsu RE-UE4SS for Palworld) ---
