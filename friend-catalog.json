@@ -17,13 +17,20 @@
           "url": "https://raw.githubusercontent.com/gryzzomaoc-afk/palworld-modpack/main/BreedingHelper-server.zip",
           "extract_to": "Pal/Binaries/Win64/ue4ss/Mods",
           "needs_ue4ss": true,
-          "size_hint_kb": 2200
+          "size_hint_kb": 2200,
+          "files": [
+            "Scripts/main.lua",
+            "Scripts/data.lua"
+          ]
         },
         "client": {
           "url": "https://raw.githubusercontent.com/gryzzomaoc-afk/palworld-modpack/main/BreedingHelper-client.zip",
           "extract_to": "Pal/Content/Paks/~mods",
           "needs_ue4ss": false,
-          "size_hint_kb": 4100
+          "size_hint_kb": 4100,
+          "files": [
+            "BreedingHelperUI_P.pak"
+          ]
         }
       },
       "friend_allowed": true
