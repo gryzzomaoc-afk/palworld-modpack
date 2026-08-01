@@ -1,15 +1,15 @@
-{
+﻿{
   "version": 1,
   "updated": "2026-08-02",
   "mods": {
     "BreedingHelper": {
       "name": "BreedingHelper",
-      "display_name_zh": "育種助手",
+      "display_name_zh": "鑲茬ó鍔╂墜",
       "category": "breeding",
-      "version": "v1.1",
-      "description_zh": "育種配對計算 + 繁中 UI。給你 parent 算最優 child、染色/IV 鎖定、群組規劃。",
+      "version": "v1.1+v2",
+      "description_zh": "鑲茬ó閰嶅皪瑷堢畻 + 绻佷腑 UI銆傜郸浣?parent 绠楁渶鍎?child銆佹煋鑹?IV 閹栧畾銆佺兢绲勮鍔冦€?,
       "tags": [
-        "繁中",
+        "绻佷腑",
         "UI"
       ],
       "components": {
@@ -22,7 +22,7 @@
             "Scripts/main.lua",
             "Scripts/data.lua"
           ],
-          "sha256": "4cbc4e5259e6acaad1fdb05018d542fda9db82ab99bd2a5526569ea1586e74d4",
+          "sha256": "c889283678b1c1d3d0281b746cd748880b1097ab194ddd14fd78c0b552155bc7",
           "_note": "lua scripts patched by CrazyChips to hide BtnAuthor, TitleText, system messages"
         },
         "client": {
@@ -33,7 +33,7 @@
           "files": [
             "BreedingHelperUI_P.pak"
           ],
-          "sha256": "5fbb0d5a39c83f5e8746e3bdfac3a4cce9c40f77e3d0a87cd14ab60e5cb94dad",
+          "sha256": "1dcd49388d78cdfcd25016c7cea881662ffc294be6348f0cafa2a57ba8a7c424",
           "_note": "BreedingHelperUI_P.pak is identical to upstream (patches are lua-side, not UI assets)"
         }
       },
@@ -42,11 +42,12 @@
         "server": 642,
         "client": 858
       },
-      "source": "CrazyChips custom build v1.1 (https://space.bilibili.com/26786884 upstream, patched by CrazyChips/Mavis)"
+      "source": "CrazyChips custom build v1.1+v2 (https://space.bilibili.com/26786884 upstream, patched by CrazyChips/Mavis)"
     }
   },
-  "_comment": "Friend-facing mod catalog. friend_allowed: true 為朋友可裝。",
-  "_how_to_use": "1. 上傳到 GitHub public repo\n2. 朋友在 .exe 裡貼 https://raw.githubusercontent.com/USER/REPO/main/friend-catalog.json\n3. 本地測試可用 file:///C:/path/to/friend-catalog.json",
-  "_security_note": "friend_common.py 會在 install 時自動驗每個 component 的 SHA256 跟這裡的 sha256 欄位。\nMismatch 會拒絕安裝（避免 MITM / 檔案損壞 / 惡意 fork）。\n要新增 mod：在這裡加 sha256 跟 updated 欄位。",
-  "_changelog": "2026-08-02: switch BREEDING HELPER distribution to CrazyChips' v1.1 custom build:\n  - server side: CrazyChips' patched lua scripts (screen_msg no-op, BtnAuthor no-op, hidden TitleText)\n  - client side: identical .pak bytes as stock (the .pak is stock UI assets; patches are lua-side)\n  - installer: CrazyChips' install.bat is the reference implementation; friend tool now points at his v1.1 zip\n"
+  "_comment": "Friend-facing mod catalog. friend_allowed: true 鐐烘湅鍙嬪彲瑁濄€?,
+  "_how_to_use": "1. 涓婂偝鍒?GitHub public repo\n2. 鏈嬪弸鍦?.exe 瑁¤布 https://raw.githubusercontent.com/USER/REPO/main/friend-catalog.json\n3. 鏈湴娓│鍙敤 file:///C:/path/to/friend-catalog.json",
+  "_security_note": "friend_common.py 鏈冨湪 install 鏅傝嚜鍕曢姣忓€?component 鐨?SHA256 璺熼€欒！鐨?sha256 娆勪綅銆俓nMismatch 鏈冩嫆绲曞畨瑁濓紙閬垮厤 MITM / 妾旀鎼嶅 / 鎯℃剰 fork锛夈€俓n瑕佹柊澧?mod锛氬湪閫欒！鍔?sha256 璺?updated 娆勪綅銆?,
+  "_changelog": "2026-08-02: switch BREEDING HELPER distribution to CrazyChips' v1.1+v2 custom build:\n  - server side: CrazyChips' patched lua scripts (screen_msg no-op, BtnAuthor no-op, hidden TitleText)\n  - client side: identical .pak bytes as stock (the .pak is stock UI assets; patches are lua-side)\n  - installer: CrazyChips' install.bat is the reference implementation; friend tool now points at his v1.1+v2 zip\n"
 }
+
