@@ -68,6 +68,16 @@ def _default_catalog_path() -> str:
     return GITHUB_DISCOVERY_SCHEME
 
 
+# Sentinel used by `_default_catalog_path()` to indicate "use the GitHub
+# folder-discovery pipeline". The UI code treats any URL starting with
+# the literal GITHUB_DISCOVERY_SCHEME as a request to call
+# `fetch_mods_from_github()` instead of `fetch_catalog(url)`.
+GITHUB_DISCOVERY_SCHEME = "github://gryzzomaoc-afk/palworld-modpack/main/mods"
+
+
+# --- GitHub repo-driven mod discovery (v1.0.8+) ---
+
+
 DEFAULT_CATALOG_URL = _default_catalog_path()
 
 
@@ -336,13 +346,6 @@ def fetch_mods_from_github() -> dict:
         "mods": mods,
         "_skipped": skipped,
     }
-
-
-# Sentinel used by `_default_catalog_path()` to indicate "use the GitHub
-# folder-discovery pipeline". The UI code treats any URL starting with
-# the literal GITHUB_DISCOVERY_SCHEME as a request to call
-# `fetch_mods_from_github()` instead of `fetch_catalog(url)`.
-GITHUB_DISCOVERY_SCHEME = "github://gryzzomaoc-afk/palworld-modpack/main/mods"
 
 
 # --- UE4SS prereq (Okaetsu RE-UE4SS for Palworld) ---
