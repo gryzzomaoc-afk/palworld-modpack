@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-08-01",
+  "updated": "2026-08-02",
   "mods": {
     "BreedingHelper": {
       "name": "BreedingHelper",
@@ -21,7 +21,8 @@
           "files": [
             "Scripts/main.lua",
             "Scripts/data.lua"
-          ]
+          ],
+          "sha256": "bf236f27394cd89b4dd1e87e6aeabfd30ce282cfd55878f9c7ee2888978b9a5c"
         },
         "client": {
           "url": "https://raw.githubusercontent.com/gryzzomaoc-afk/palworld-modpack/main/BreedingHelper-client.zip",
@@ -30,12 +31,18 @@
           "size_hint_kb": 4100,
           "files": [
             "BreedingHelperUI_P.pak"
-          ]
+          ],
+          "sha256": "710a892f1b1c64ef85a1bfc11ca84b91f23f543da6c98ffd5d20557263f234d3"
         }
       },
-      "friend_allowed": true
+      "friend_allowed": true,
+      "size_hint_kb": {
+        "server": 642,
+        "client": 858
+      }
     }
   },
   "_comment": "Friend-facing mod catalog. friend_allowed: true 為朋友可裝。",
-  "_how_to_use": "1. 上傳到 GitHub public repo\n2. 朋友在 .exe 裡貼 https://raw.githubusercontent.com/USER/REPO/main/friend-catalog.json\n3. 本地測試可用 file:///C:/path/to/friend-catalog.json"
+  "_how_to_use": "1. 上傳到 GitHub public repo\n2. 朋友在 .exe 裡貼 https://raw.githubusercontent.com/USER/REPO/main/friend-catalog.json\n3. 本地測試可用 file:///C:/path/to/friend-catalog.json",
+  "_security_note": "friend_common.py 會在 install 時自動驗每個 component 的 SHA256 跟這裡的 sha256 欄位。\nMismatch 會拒絕安裝（避免 MITM / 檔案損壞 / 惡意 fork）。\n要新增 mod：在這裡加 sha256 跟 updated 欄位。"
 }
