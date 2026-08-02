@@ -417,7 +417,6 @@ def main(page: ft.Page):
 
     # Wire catalog button (delayed - do_refresh_catalog must be defined first)
     catalog_sync_btn.on_click = do_refresh_catalog
-    catalog_verify_btn.on_click = do_verify_all_mods
 
     # --- Mod details dialog (Chinese features + usage) ---
     def show_mod_details(name, mod):
@@ -533,6 +532,8 @@ def main(page: ft.Page):
             ],
         )
         page.show_dialog(dlg)
+
+    catalog_verify_btn.on_click = do_verify_all_mods
 
     # --- Mods rendering ---
     def render_mods():
