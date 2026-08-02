@@ -1,0 +1,38 @@
+{
+  "name": "BlueEyesChaosMaxDragon",
+  "display_name_zh": "青眼混沌龍 (Xenolord 替換)",
+  "version": "1.0.0",
+  "category": "visual",
+  "description_zh": "把遊戲裡的 Xenolord 帕魯外觀換成《遊戲王》的「青眼混沌龍」（Yu-Gi-Oh 聯名 cosplay）",
+  "tags": [
+    "視覺",
+    "帕魯替換",
+    "Yu-Gi-Oh",
+    "cosplay"
+  ],
+  "friend_allowed": true,
+  "source": "Blue Eyes Chaos Max Dragon over Xenolord v1.0.0 by sv_boy (Steam workshop 3763851648). Yu-Gi-Oh IP by Konami. Mod by sv_boy.",
+  "_ip_notice": "本 mod 含 Konami 持有的《遊戲王》IP（青眼混沌龍角色）。僅供朋友間私人測試使用，請勿用於商業用途。如原作者 sv_boy 要求下架請告知。",
+  "components": {
+    "client": {
+      "zip": "client.zip",
+      "extract_to": "Pal/Content/Paks/~mods",
+      "needs_ue4ss": false,
+      "size_hint_kb": 8765,
+      "files": [
+        "Blue_Eyes_Chaos_Max_Dragon_P.pak"
+      ],
+      "sha256": "4ced2da8615c8f553e263f4c7cc35adf3da09c0691a885df3b61986f57aec3b2",
+      "_note": "Pure visual reskin mod (Pal mesh/texture replacement). Client-only — server logic untouched. Other players without the mod will see the original Xenolord."
+    }
+  },
+  "features_zh": [
+    "把遊戲裡的 Xenolord 帕魯外觀換成 Yu-Gi-Oh 的「青眼混沌龍」",
+    "純視覺 mod，不改任何遊戲數值（CP、技能、行為、血量都不變）",
+    "純客戶端渲染，server 端不用裝",
+    "朋友各看各的：你看到青眼龍，沒裝的朋友看到原本的 Xenolord",
+    "9 MB，下載 / 安裝秒完成",
+    "改 pal 的 model 跟 texture，spawn id 不變（Xenolord 還是 Xenolord）"
+  ],
+  "usage_zh": "1. 工具裝完 .pak 後完全關閉 Palworld 再開。\n2. 進遊戲（單機或 server 都可）→ 找到一隻 Xenolord 帕魯。\n3. 你會看到原本黑金色的 Xenolord 變成藍白色的「青眼混沌龍」。\n4. 用 palsphere 召喚出來的也會是青眼龍。\n5. 注意：\n   - 純客戶端，朋友沒裝的話他看到原本的 Xenolord\n   - 抓到的帕魯在 server 端還是記錄成 Xenolord，不是青眼龍\n   - 這是 cosplay / 視覺改造，不影響遊戲邏輯\n6. 不喜歡了：到 LogicMods / ~mods 資料夾刪 Blue_Eyes_Chaos_Max_Dragon_P.pak 即可"
+}

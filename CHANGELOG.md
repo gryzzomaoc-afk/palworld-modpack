@@ -9,6 +9,10 @@ All dates in GMT+8.
   mod 加進 friend installer。顯示帕魯、寶箱、地下城、快速旅行、玩家
   基地、死亡位置、技能果樹、稀有帕魯、BOSS 等資訊。純 client-side，
   server 端不用裝。
+- **BlueEyesChaosMaxDragon (青眼混沌龍 / Xenolord 替換)** — 純視覺
+  mod，把 Xenolord 帕魯外觀換成《遊戲王》的「青眼混沌龍」。每個
+  客戶端各自渲染，沒裝的朋友看到原本的 Xenolord。IP 屬於 Konami，
+  mod by sv_boy。
 - **Mod 卡片全中文化** — UI 改用 `display_name_zh` + `description_zh`
   顯示，catalog 預設就是繁體中文。
 - **「查看詳情」按鈕** — 每張 mod 卡多一個 Info 按鈕，點下去跳出
@@ -20,14 +24,26 @@ All dates in GMT+8.
   使用說明.txt，下載一次就包含所有需要的東西。
 
 ### Friend installer
-- 朋友工具 v1.1.0 — 3 個 mod 自動抓到（BreedingHelper + UltraWeather +
-  YetAnotherMinimap），全部中文卡片 + 中文使用說明。
+- 朋友工具 v1.1.0 — **4 個 mod 自動抓到**（BreedingHelper + UltraWeather +
+  YetAnotherMinimap + BlueEyesChaosMaxDragon），全部中文卡片 + 中文使用說明。
 - 下載連結：https://github.com/gryzzomaoc-afk/palworld-modpack/releases/download/v1.1.0/PalworldFriendModInstaller-v1.1.0.zip
+
+### Fixed (修正)
+- **Mod install 鎖定邏輯** — 當 mod 需要 UE4SS 但沒裝時，按鈕變成「🔒 需先裝
+  UE4SS」鎖頭，點下去跳 snack 提示去上方裝 UE4SS。Server-side 也擋一層
+  防止 bypass UI。
+- **LogicMod 安裝偵測** — YAM 之前裝完顯示「未安裝」是因為 detect 函式只認
+  `ue4ss/Mods/<name>/` 跟 `Paks/~mods/`，沒認 `Paks/LogicMods/`。修完讀
+  manifest 的 `extract_to` 欄位。
+- **YAM client.zip 重新包裝** — 之前是 .pak rename 成 .zip（installer 解
+  zip 失敗），現在是真正含 .pak 的 zip。
 
 ### Notes
 - v1.1.0 之後每加新 mod 不用朋友重抓 .exe（除非 UI 有改）— repo-driven
   架構保留，朋友只要按「同步 MOD 資料庫」就會看到新 mod。
 - 從 v1.0.x 升級到 v1.1.0：需要重抓 .zip（UI 改了），朋友的 .exe 重灌。
+- BlueEyesChaosMaxDragon 屬於《遊戲王》IP 衍生作品，僅供朋友間測試
+  使用，請勿商業化。如原作者 sv_boy 要求下架請告知。
 
 ## v1.0.9 (2026-08-02)
 
