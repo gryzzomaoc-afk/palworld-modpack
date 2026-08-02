@@ -1,0 +1,32 @@
+{
+  "name": "PlayerRadar-Server",
+  "display_name_zh": "玩家雷達 - 伺服器端",
+  "version": "1.0.0",
+  "category": "utility",
+  "description_zh": "伺服器端 player 位置廣播器。掃所有 PalPlayerCharacter 寫到共用 JSON 檔，讓 client 端 UE4SS mod 讀。32 人 dedi server 也能在 client 端看到全部人。",
+  "tags": [
+    "工具",
+    "管理",
+    "debug"
+  ],
+  "friend_allowed": true,
+  "source": "CrazyChips 2026-08-02 (replaces BREEDER's static marker logic with a live JSON broadcast)",
+  "components": {
+    "server": {
+      "zip": "server.zip",
+      "extract_to": "Pal/Binaries/Win64/ue4ss/Mods",
+      "needs_ue4ss": true,
+      "size_hint_kb": 9,
+      "files": [
+        "Scripts/main.lua",
+        "config.lua",
+        "enabled.txt"
+      ],
+      "sha256": "5a5d4b6e6f1bb92070b43d62ccea874ae27029d311cc86aa5026bfa5b761970d",
+      "_note": "Server-only UE4SS Lua mod. Configure config.lua's output_path to a Windows file share that the client-side PlayerRadar-Client can read."
+    }
+  },
+  "size_hint_kb": {
+    "server": 4
+  }
+}

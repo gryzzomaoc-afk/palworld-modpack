@@ -1,0 +1,32 @@
+{
+  "name": "PlayerRadar-Client",
+  "display_name_zh": "玩家雷達 - 客戶端",
+  "version": "1.0.0",
+  "category": "utility",
+  "description_zh": "客戶端 player 雷達 UI。讀 PlayerRadar-Server 寫的 JSON，把全部玩家 marker 畫到 in-game map（M 鍵刷新），按 T 直接傳送到最近玩家旁邊。讀不到 server JSON 時 fallback 到 FindAllOf（看到附近的人）。",
+  "tags": [
+    "工具",
+    "debug",
+    "地圖"
+  ],
+  "friend_allowed": true,
+  "source": "CrazyChips 2026-08-02 (client mod, requires PlayerRadar-Server for full 32-slot visibility)",
+  "components": {
+    "client": {
+      "zip": "client.zip",
+      "extract_to": "Pal/Binaries/Win64/ue4ss/Mods",
+      "needs_ue4ss": true,
+      "size_hint_kb": 10,
+      "files": [
+        "Scripts/main.lua",
+        "config.lua",
+        "enabled.txt"
+      ],
+      "sha256": "55e22b15a68798cecacdc7b6f9d7015d3febfe98c304ff0eb604f05c79c4c39a",
+      "_note": "Client-only UE4SS Lua mod. Configure config.lua's server_json_path to point at the share PlayerRadar-Server writes to. If unreachable, falls back to local FindAllOf."
+    }
+  },
+  "size_hint_kb": {
+    "client": 7
+  }
+}
