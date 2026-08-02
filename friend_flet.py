@@ -24,6 +24,7 @@ from friend_common import (
     check_ue4ss, check_ue4ss_health, install_ue4ss, uninstall_ue4ss,
     install_mod, uninstall_mod, is_mod_installed, verify_mod_install,
     fetch_mods_from_github, GITHUB_DISCOVERY_SCHEME,
+    get_installed_mod_info, verify_all_mods, is_upgrade_available,
     UE4SS_URL,
 )
 
@@ -107,6 +108,12 @@ def main(page: ft.Page):
         "同步 MOD 資料庫",
         icon=ft.Icons.REFRESH,
         style=ft.ButtonStyle(color=ACCENT),
+    )
+    catalog_verify_btn = ft.TextButton(
+        "🔍 驗證所有 MOD",
+        icon=ft.Icons.VERIFIED_OUTLINED,
+        style=ft.ButtonStyle(color=ACCENT),
+        disabled=True,
     )
     catalog_loading = ft.ProgressRing(
         width=16,
@@ -394,6 +401,7 @@ def main(page: ft.Page):
                 catalog_sync_btn.disabled = False
                 catalog_sync_btn.text = "同步 MOD 資料庫"
                 catalog_loading.visible = False
+                catalog_verify_btn.disabled = not bool(mods)
                 set_status(f"✓ 同步成功，找到 {len(mods)} 個 mod", "success")
                 render_mods()
             except Exception as err:
@@ -409,6 +417,7 @@ def main(page: ft.Page):
 
     # Wire catalog button (delayed - do_refresh_catalog must be defined first)
     catalog_sync_btn.on_click = do_refresh_catalog
+    catalog_verify_btn.on_click = do_verify_all_mods
 
     # --- Mod details dialog (Chinese features + usage) ---
     def show_mod_details(name, mod):
@@ -445,6 +454,79 @@ def main(page: ft.Page):
             content=ft.Container(
                 content=ft.Column(body_sections, tight=True, scroll=ft.ScrollMode.AUTO),
                 width=480,
+            ),
+            actions=[
+                ft.TextButton("關閉", on_click=lambda e: page.pop_dialog()),
+            ],
+        )
+        page.show_dialog(dlg)
+
+    # --- Verify all mods dialog ---
+    def do_verify_all_mods(e=None):
+        if not state.get("palworld_path"):
+            show_snack("請先偵測 Palworld 路徑", "error")
+            return
+        cat = state.get("catalog")
+        if not cat or not cat.get("mods"):
+            show_snack("請先同步 MOD 資料庫", "error")
+            return
+        catalog_verify_btn.disabled = True
+        set_status("正在驗證所有 MOD…", "info")
+
+        def work():
+            try:
+                results = verify_all_mods(cat, state["palworld_path"])
+                show_verify_results(results)
+                upgrades = sum(1 for r in results if r["status"] == "upgrade_available")
+                missing = sum(1 for r in results if r["status"] == "files_missing")
+                not_inst = sum(1 for r in results if r["status"] == "not_installed")
+                ok = sum(1 for r in results if r["status"] == "up_to_date")
+                set_status(
+                    f"驗證完成: ✓ {ok} 最新 / ⚠ {upgrades} 可更新 / ✗ {not_inst} 未裝 / ✖ {missing} 檔案亏失",
+                    "info",
+                )
+            except Exception as err:
+                set_status("✖ 驗證失敗: " + str(err), "error")
+                show_snack("驗證失敗: " + str(err), "error")
+            finally:
+                catalog_verify_btn.disabled = False
+                page.update()
+
+        threading.Thread(target=work, daemon=True).start()
+
+    def show_verify_results(results):
+        """Dialog showing per-mod verify status."""
+        status_emoji = {
+            "up_to_date": "✓",
+            "upgrade_available": "⚠",
+            "not_installed": "○",
+            "files_missing": "✖",
+            "version_unknown": "?",
+        }
+        status_color = {
+            "up_to_date": SUCCESS,
+            "upgrade_available": WARNING,
+            "not_installed": TEXT_MUTED,
+            "files_missing": ERROR,
+            "version_unknown": TEXT_SECONDARY,
+        }
+        rows = []
+        for r in results:
+            emoji = status_emoji.get(r["status"], "?")
+            rows.append(ft.Row([
+                ft.Text(emoji, size=16, color=status_color.get(r["status"], TEXT_PRIMARY)),
+                ft.Column([
+                    ft.Text(r["display"], size=13, weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
+                    ft.Text(r["message"], size=11, color=status_color.get(r["status"], TEXT_SECONDARY)),
+                ], spacing=2, expand=True),
+            ], spacing=10))
+            rows.append(ft.Container(height=4))
+        dlg = ft.AlertDialog(
+            title=ft.Text(f"驗證結果 ({len(results)} 個 mod)"),
+            content=ft.Container(
+                content=ft.Column(rows, tight=True, scroll=ft.ScrollMode.AUTO),
+                width=520,
+                height=400,
             ),
             actions=[
                 ft.TextButton("關閉", on_click=lambda e: page.pop_dialog()),
@@ -591,6 +673,13 @@ def main(page: ft.Page):
                     ),
                 )
 
+        # "更新到 vX" button — only when installed and upgrade available
+        upgrade_info = get_installed_mod_info(name) or {}
+        upgrade_available = (
+            installed
+            and is_upgrade_available(upgrade_info.get("version", ""), version)
+        )
+
         # "查看詳情" button — only show if mod has features_zh or usage_zh
         actions_row = [status_chip, btn]
         if has_details:
@@ -603,6 +692,34 @@ def main(page: ft.Page):
                     style=ft.ButtonStyle(color=ACCENT),
                 ),
             )
+        if upgrade_available:
+            def on_update(e, n=name, m=mod):
+                if not state.get("palworld_path"):
+                    show_snack("請先偵測 Palworld 路徑", "error")
+                    return
+                set_status(f"正在更新 {display}…", "info")
+                def work():
+                    # Update = install (overwrites existing files in place)
+                    ok, msg = install_mod(m, state["palworld_path"])
+                    if ok:
+                        set_status(f"✓ {display} 更新完成: {msg}", "success")
+                        show_snack(f"{display} 更新完成", "success")
+                    else:
+                        set_status(f"✗ {display} 更新失敗: {msg}", "error")
+                        show_snack(f"{display} 更新失敗: {msg}", "error")
+                    render_mods()
+                threading.Thread(target=work, daemon=True).start()
+            update_btn = ft.ElevatedButton(
+                f"⬆️ 更新到 v{version}",
+                icon=ft.Icons.UPGRADE,
+                on_click=on_update,
+                style=ft.ButtonStyle(
+                    bgcolor=WARNING,
+                    color="#1a1a1a",
+                ),
+            )
+            # Place update button right after the install/uninstall button
+            actions_row.append(update_btn)
 
         return ft.Container(
             content=ft.Column(
@@ -727,6 +844,7 @@ def main(page: ft.Page):
                         ft.Icon(ft.Icons.CLOUD_SYNC, color=ACCENT, size=18),
                         ft.Text("MOD 資料庫", size=13, weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
                         ft.Container(expand=True),
+                        catalog_verify_btn,
                         catalog_loading,
                         catalog_sync_btn,
                     ],

@@ -10,6 +10,7 @@ import io
 import json
 import os
 import sys
+import time
 import urllib.error
 import urllib.request
 import ssl
@@ -896,6 +897,10 @@ def install_mod(mod: dict, palworld_path: str) -> tuple[bool, str]:
     if not succeeded:
         return False, "; ".join(r[1] for r in failed)
 
+    # Record install state for verify/auto-update
+    mod_name = mod.get("name", "unknown")
+    record_mod_installed(mod_name, mod.get("version", ""), succeeded)
+
     summary = f"{', '.join(succeeded)} installed"
     if failed:
         summary += f" (failed: {', '.join(r[0] for r in failed)})"
@@ -920,6 +925,10 @@ def uninstall_mod(mod: dict, palworld_path: str) -> tuple[bool, str]:
     if not succeeded:
         return False, "nothing to remove"
 
+    # Remove from install state
+    mod_name = mod.get("name", "unknown")
+    record_mod_uninstalled(mod_name)
+
     return True, f"{', '.join(succeeded)} removed"
 
 
@@ -935,3 +944,196 @@ def is_mod_installed(mod: dict, palworld_path: str) -> bool:
         if not _is_component_installed(comp, palworld_path, mod_name):
             return False
     return True
+
+
+# ===========================================================================
+# Install state tracking + version check + verify + auto-update
+# ===========================================================================
+
+STATE_FILE_NAME = "friend_installer_state.json"
+STATE_VERSION = 1
+
+
+def _state_file_path() -> Path:
+    """Path to the state file. Lives next to the running .exe (or __file__)."""
+    try:
+        if getattr(sys, "frozen", False):
+            base = Path(sys.executable).parent
+        else:
+            base = Path(__file__).parent
+    except Exception:
+        base = Path.cwd()
+    return base / STATE_FILE_NAME
+
+
+def load_installed_state() -> dict:
+    """Read the install state file. Returns empty dict on error/missing."""
+    path = _state_file_path()
+    if not path.exists():
+        return {"version": STATE_VERSION, "mods": {}}
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, dict) or "mods" not in data:
+            return {"version": STATE_VERSION, "mods": {}}
+        return data
+    except Exception:
+        return {"version": STATE_VERSION, "mods": {}}
+
+
+def save_installed_state(state: dict) -> bool:
+    """Atomically write the state file. Returns True on success."""
+    path = _state_file_path()
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".json.tmp")
+        with tmp.open("w", encoding="utf-8") as f:
+            json.dump(state, f, indent=2, ensure_ascii=False)
+        tmp.replace(path)
+        return True
+    except Exception as e:
+        print(f"[state] save failed: {e!r}", file=sys.stderr)
+        return False
+
+
+def record_mod_installed(mod_name: str, version: str, components: list) -> bool:
+    """Mark a mod as installed with its current version + components."""
+    state = load_installed_state()
+    state.setdefault("mods", {})
+    state["mods"][mod_name] = {
+        "version": version or "",
+        "installed_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "components": list(components or []),
+    }
+    return save_installed_state(state)
+
+
+def record_mod_uninstalled(mod_name: str) -> bool:
+    """Remove a mod from the install state."""
+    state = load_installed_state()
+    if mod_name in state.get("mods", {}):
+        del state["mods"][mod_name]
+        return save_installed_state(state)
+    return True
+
+
+def get_installed_mod_info(mod_name: str) -> dict | None:
+    """Return installed info dict for a mod, or None if never recorded."""
+    state = load_installed_state()
+    return state.get("mods", {}).get(mod_name)
+
+
+def _normalize_version(v: str) -> str:
+    """Normalize version string for comparison. Lowercase + strip 'v' prefix + strip whitespace."""
+    if not v:
+        return ""
+    s = v.strip().lower()
+    if s.startswith("v"):
+        s = s[1:]
+    return s
+
+
+def is_upgrade_available(installed_version: str, catalog_version: str) -> bool:
+    """Heuristic: True if catalog_version looks newer than installed_version.
+
+    Conservative: only returns True when both look like semver-ish strings
+    (e.g. '1.0.0' or '1.2') and the catalog version is greater. If they
+    look unrelated (e.g. 'v1.1+v2' vs 'v1.2+fix'), returns False to avoid
+    false positives.
+    """
+    a = _normalize_version(installed_version)
+    b = _normalize_version(catalog_version)
+    if not a or not b or a == b:
+        return False
+    # Both must be digit-led for safe comparison
+    if not (a[0].isdigit() and b[0].isdigit()):
+        return False
+    # Compare dotted parts as ints
+    def parts(s):
+        out = []
+        for p in s.split("."):
+            digits = ""
+            for c in p:
+                if c.isdigit():
+                    digits += c
+                else:
+                    break
+            try:
+                out.append(int(digits) if digits else 0)
+            except Exception:
+                out.append(0)
+        return out
+    pa, pb = parts(a), parts(b)
+    n = max(len(pa), len(pb))
+    pa += [0] * (n - len(pa))
+    pb += [0] * (n - len(pb))
+    return pb > pa
+
+
+def verify_all_mods(catalog: dict, palworld_path: str) -> list[dict]:
+    """Verify each mod in the catalog against on-disk state.
+
+    Returns a list of dicts:
+      [{ name, display, installed_version, catalog_version, status,
+         files_ok, components_ok, message }, ...]
+    status is one of: 'not_installed', 'up_to_date', 'upgrade_available',
+                       'version_unknown', 'files_missing', 'hash_mismatch'
+    """
+    out = []
+    mods = (catalog or {}).get("mods", {}) or {}
+    for name, mod in mods.items():
+        display = mod.get("display_name_zh") or mod.get("display_name", name)
+        catalog_version = mod.get("version", "")
+        info = get_installed_mod_info(name) or {}
+        installed_version = info.get("version", "")
+        comps = mod.get("components", {}) or {}
+
+        # Files-on-disk check
+        files_ok = True
+        comps_ok = True
+        missing = []
+        for role, comp in comps.items():
+            extract_to = comp.get("extract_to", "")
+            if not extract_to:
+                continue
+            base = Path(palworld_path) / extract_to
+            for f in comp.get("files", []):
+                if not (base / f.split("/")[-1]).exists():
+                    files_ok = False
+                    comps_ok = False
+                    missing.append(f"{role}/{f.split('/')[-1]}")
+
+        if not is_mod_installed(mod, palworld_path):
+            status = "not_installed"
+            message = "未安裝"
+        elif not files_ok:
+            status = "files_missing"
+            message = f"檔案缺失: {', '.join(missing)}"
+        elif not installed_version:
+            status = "version_unknown"
+            message = "已安裝但無版本記錄（之前可能手動裝的）"
+        elif not catalog_version:
+            status = "up_to_date"
+            message = f"已安裝 v{installed_version}（catalog 無版本）"
+        elif installed_version == catalog_version:
+            status = "up_to_date"
+            message = f"v{installed_version}（最新）"
+        elif is_upgrade_available(installed_version, catalog_version):
+            status = "upgrade_available"
+            message = f"v{installed_version} → v{catalog_version}（可更新）"
+        else:
+            # Same or different but not "upgrade"
+            status = "up_to_date"
+            message = f"v{installed_version}（catalog: v{catalog_version}）"
+
+        out.append({
+            "name": name,
+            "display": display,
+            "installed_version": installed_version,
+            "catalog_version": catalog_version,
+            "status": status,
+            "files_ok": files_ok,
+            "components_ok": comps_ok,
+            "message": message,
+        })
+    return out

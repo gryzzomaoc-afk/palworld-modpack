@@ -38,6 +38,20 @@ All dates in GMT+8.
 - **YAM client.zip 重新包裝** — 之前是 .pak rename 成 .zip（installer 解
   zip 失敗），現在是真正含 .pak 的 zip。
 
+### Added (驗證 + 自動更新)
+- **🔍 驗證所有 MOD 按鈕** — catalog 卡右上有「🔍 驗證所有 MOD」，點下去
+  跳 AlertDialog，列出每個 mod 的狀態：
+  - ✓ 最新 — 已裝且等於 catalog 版本
+  - ⚠ 可更新 — 裝了但有新版
+  - ○ 未安裝
+  - ✗ 檔案缺失 — 裝了但檔案不見
+  - ? 無版本記錄 — 之前可能手動裝的
+- **⬆️ 更新按鈕** — mod 卡如果已裝 + 有新版，按鈕區會多一個橘色
+  「⬆️ 更新到 v1.2」按鈕（點下去直接覆蓋安裝新版本，不用先卸載）。
+- **state file** — `friend_installer_state.json`（放在 .exe 旁邊）會記錄
+  每個 mod 安裝的版本、時間、components。同步 catalog 後自動比對。
+- **install_mod 自動記錄** — 之後安裝/卸載 mod 都會自動更新 state。
+
 ### Notes
 - v1.1.0 之後每加新 mod 不用朋友重抓 .exe（除非 UI 有改）— repo-driven
   架構保留，朋友只要按「同步 MOD 資料庫」就會看到新 mod。
