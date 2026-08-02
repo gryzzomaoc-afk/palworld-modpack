@@ -484,7 +484,20 @@ def verify_mod_install(mod: dict, palworld_path: str) -> dict:
         needs_ue4ss = comp.get("needs_ue4ss", True)
         files = comp.get("files") or []
 
-        if needs_ue4ss:
+        # Determine target directory. Use extract_to from manifest, with
+        # the same heuristic as verify_all_mods: only UE4SS Lua mods
+        # (extract_to ends with ue4ss/Mods) get a <modname>/ subfolder.
+        # LogicMods and plain Pak mods drop files directly in extract_to.
+        extract_to = comp.get("extract_to", "")
+        if extract_to:
+            base = Path(palworld_path) / extract_to
+            mod_name = mod.get("name", "unknown")
+            et_norm = extract_to.replace("\\", "/").rstrip("/")
+            if needs_ue4ss and et_norm.endswith("ue4ss/Mods"):
+                base = base / mod_name
+            target_dir = base
+        elif needs_ue4ss:
+            # No extract_to specified: fall back to old UE4SS default
             mod_name = mod.get("name", "unknown")
             target_dir = Path(palworld_path) / "Pal" / "Binaries" / "Win64" / "ue4ss" / "Mods" / mod_name
         else:
@@ -492,10 +505,11 @@ def verify_mod_install(mod: dict, palworld_path: str) -> dict:
 
         for f in files:
             # 'Scripts/main.lua' -> target_dir / Scripts / main.lua
-            # 'BreedingHelperUI_P.pak' -> target_dir / BreedingHelperUI_P.pak
+            # 'YetAnotherMinimap.pak' -> target_dir / YetAnotherMinimap.pak (flat)
             parts = f.replace("\\", "/").split("/")
-            if not needs_ue4ss:
-                parts = [parts[-1]]  # client: flatten (only top-level .pak)
+            if not (needs_ue4ss and et_norm.endswith("ue4ss/Mods")):
+                # Client / LogicMod: flatten (only top-level filename)
+                parts = [parts[-1]]
             fpath = target_dir.joinpath(*parts)
             entry = {
                 "file": f,

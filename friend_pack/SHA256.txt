@@ -1,1 +1,1 @@
-PalworldFriendModInstaller.exe  8f405afbb3746ed26ae6b939f1f3a0f967cd3772df72662f1ccbc37870c30bbb
+PalworldFriendModInstaller.exe  bfd0629f71b4da14f199234b70ddedae27f25540c878dec00a203afd543aadae
