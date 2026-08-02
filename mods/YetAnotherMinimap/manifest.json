@@ -17,12 +17,12 @@
       "zip": "client.zip",
       "extract_to": "Pal/Content/Paks/LogicMods",
       "needs_ue4ss": true,
-      "size_hint_kb": 640,
+      "size_hint_kb": 561,
       "files": [
         "YetAnotherMinimap.pak"
       ],
-      "sha256": "c2d28307c622f2ade977a055505da852708e189d66fced712be41c1fb6351e8d",
-      "_note": "LogicMod (.pak). Settings configurable in-game (title screen → bottom right) or via modconfig.json."
+      "sha256": "297fd07dee6a005d108f3b48e60ffcb1adf76efd27f50fc2bcdbe8682dfd5886",
+      "_note": "LogicMod (.pak inside a .zip). Settings configurable in-game (title screen → bottom right) or via modconfig.json."
     }
   },
   "features_zh": [

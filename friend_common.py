@@ -838,9 +838,24 @@ def _uninstall_component(mod: dict, comp: dict, palworld_path: str, role: str) -
 def _is_component_installed(comp: dict, palworld_path: str, mod_name: str) -> bool:
     """Check if a single component is installed."""
     if comp.get("needs_ue4ss", True):
+        # UE4SS Lua mod: look in ue4ss/Mods/<name>/ folder
         target = Path(palworld_path) / "Pal" / "Binaries" / "Win64" / "ue4ss" / "Mods" / mod_name
-        return target.exists()
-    candidates = [
+        if target.exists():
+            return True
+        # ALSO check extract_to for UE4SS-using LogicMods (.pak in Paks/LogicMods/)
+        extract_to = comp.get("extract_to", "")
+        if extract_to:
+            base = Path(palworld_path) / extract_to
+            for f in comp.get("files", []):
+                if (base / f.split("/")[-1]).exists():
+                    return True
+        return False
+    # Plain .pak mod: respect extract_to if present, else fall back to defaults
+    candidates = []
+    extract_to = comp.get("extract_to", "")
+    if extract_to:
+        candidates.append(Path(palworld_path) / extract_to)
+    candidates += [
         Path(palworld_path) / "Pal" / "Content" / "Paks" / "~mods",
         Path(palworld_path) / "Pal" / "Content" / "Paks",
     ]
