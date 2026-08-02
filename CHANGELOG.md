@@ -2,6 +2,56 @@
 
 All dates in GMT+8.
 
+## v1.0.9 (2026-08-02)
+
+### Removed (移除)
+- **PlayerRadar-Server** + **PlayerRadar-Client** removed from `mods/`.
+  - User-feedback-driven: too experimental, required a complex server-side install
+    (samba share + UE4SS on dedicated server) that turned out to be too brittle
+    for friends to set up reliably.
+  - Friend installer auto-discovers 2 mods now: **BreedingHelper** + **UltraWeather**.
+
+### Notes
+- No .exe rebuild required — the v1.0.8 installer is repo-driven, so friends
+  who already downloaded `PalworldFriendModInstaller.exe` will see the trimmed
+  catalog the next time they click "同步 MOD 資料庫".
+- If a friend had already installed PlayerRadar on their local client, the
+  mod folder is still there but the installer will no longer offer updates
+  or verify it. They can delete `Pal\Binaries\Win64\ue4ss\Mods\PlayerRadar-Client\`
+  manually to clean up.
+
+## v1.0.8 (2026-08-02)
+
+### Added (新增)
+- **Repo-driven mod discovery** — `fetch_mods_from_github()` lists `mods/` via
+  the GitHub Contents API and pulls each `manifest.json`. Adding a new mod no
+  longer requires rebuilding the .exe.
+- **PlayerRadar-Server** — UE4SS Lua mod for dedicated server; lists all
+  online players' positions to a JSON file.
+- **PlayerRadar-Client** — UE4SS Lua mod for client; reads the server JSON
+  and renders in-game map markers (M key to refresh, T key to teleport).
+- **UltraWeather** — UE4SS Lua mod (Fr4nsson workshop 4504); Sky Creator
+  schedule, volumetric clouds, dynamic height fog.
+
+### Removed (移除)
+- **features_zh UI render** — per user decision "client downloads .exe ONCE",
+  reverted to keep the .exe stable. Feature descriptions remain in each
+  mod's `manifest.json` for future use.
+
+### Fixed (修正)
+- **PlayerRadar config.lua** — moved into `Scripts/` so `require("config")`
+  resolves (BREEDER-style structure, see UE4SS Lua file structure gotcha).
+- **PlayerRadar find pattern** — replaced `StaticFindObject` with
+  `FindAllOf("PalPlayerCharacter")` for cross-build compatibility.
+
+### Notes
+- v1.0.8 release asset uploaded as raw PyInstaller binary (88.88 MB, SHA256
+  `bafa13aac6693559e85c9f456995f977c1808f3ffdef385d776f894ae114fa2c`).
+- Release body and CHANGELOG switched to English-only to avoid GitHub
+  API mojibake.
+- Friend installer still ships only **BreedingHelper** + **UltraWeather**
+  to regular friends as of v1.0.9 (PlayerRadar was a v1.0.8 experiment).
+
 ## v1.0.7 (2026-08-02)
 
 ### Added (新增)
