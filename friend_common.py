@@ -878,6 +878,13 @@ def install_mod(mod: dict, palworld_path: str) -> tuple[bool, str]:
     if not comps:
         return False, "no components"
 
+    # Pre-check: if any component needs UE4SS, refuse without it installed
+    needs_ue4ss = any(c.get("needs_ue4ss", True) for c in comps.values())
+    if needs_ue4ss:
+        s = check_ue4ss(palworld_path)
+        if not s.get("installed"):
+            return False, "需要先安裝 UE4SS（請用上方「🚀 一鍵安裝 UE4SS」按鈕）"
+
     results = []
     for role, comp in comps.items():
         ok, msg = _install_component(mod, comp, palworld_path, role)

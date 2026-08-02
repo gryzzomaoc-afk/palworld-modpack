@@ -557,15 +557,39 @@ def main(page: ft.Page):
                 ),
             )
         else:
-            btn = ft.ElevatedButton(
-                "安裝",
-                icon=ft.Icons.DOWNLOAD,
-                on_click=on_install,
-                style=ft.ButtonStyle(
-                    bgcolor=ACCENT,
-                    color="#ffffff",
-                ),
+            # Check if this mod needs UE4SS but it's not installed
+            ue4ss_status = state.get("ue4ss_status") or {}
+            ue4ss_installed = bool(ue4ss_status.get("installed"))
+            mod_needs_ue4ss = any(
+                c.get("needs_ue4ss", True) for c in (mod.get("components") or {}).values()
             )
+
+            if mod_needs_ue4ss and not ue4ss_installed:
+                def on_locked(e):
+                    show_snack(
+                        "🔒 請先到上方「前置需求 (UE4SS)」卡按「🚀 一鍵安裝 UE4SS」",
+                        "warning",
+                    )
+                btn = ft.ElevatedButton(
+                    "需先裝 UE4SS",
+                    icon=ft.Icons.LOCK,
+                    on_click=on_locked,
+                    style=ft.ButtonStyle(
+                        bgcolor=BG_CARD_HOVER,
+                        color=TEXT_MUTED,
+                        side=ft.BorderSide(1, BORDER),
+                    ),
+                )
+            else:
+                btn = ft.ElevatedButton(
+                    "安裝",
+                    icon=ft.Icons.DOWNLOAD,
+                    on_click=on_install,
+                    style=ft.ButtonStyle(
+                        bgcolor=ACCENT,
+                        color="#ffffff",
+                    ),
+                )
 
         # "查看詳情" button — only show if mod has features_zh or usage_zh
         actions_row = [status_chip, btn]
