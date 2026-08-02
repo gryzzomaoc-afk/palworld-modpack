@@ -11,6 +11,9 @@ __pycache__/
 # Distribution
 dist/
 
+# Friend-pack raw binaries (zip is the actual deliverable)
+friend_pack/*.exe
+
 # Logs
 *.log
 

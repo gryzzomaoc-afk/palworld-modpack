@@ -410,6 +410,48 @@ def main(page: ft.Page):
     # Wire catalog button (delayed - do_refresh_catalog must be defined first)
     catalog_sync_btn.on_click = do_refresh_catalog
 
+    # --- Mod details dialog (Chinese features + usage) ---
+    def show_mod_details(name, mod):
+        """Open a dialog showing the mod's features_zh + usage_zh in detail."""
+        display = mod.get("display_name_zh") or mod.get("display_name", name)
+        version = mod.get("version", "?")
+        source = mod.get("source", "")
+        features = mod.get("features_zh") or []
+        usage = mod.get("usage_zh") or ""
+
+        body_sections = []
+
+        if features:
+            feat_lines = "\n".join(f"  • {f}" for f in features)
+            body_sections.append(ft.Text("功能特色", size=14, weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY))
+            body_sections.append(ft.Container(height=4))
+            body_sections.append(ft.Text(feat_lines, size=12, color=TEXT_SECONDARY))
+
+        if usage:
+            if body_sections:
+                body_sections.append(ft.Container(height=14))
+            body_sections.append(ft.Text("使用說明", size=14, weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY))
+            body_sections.append(ft.Container(height=4))
+            body_sections.append(ft.Text(usage, size=12, color=TEXT_SECONDARY, selectable=True))
+
+        if source:
+            if body_sections:
+                body_sections.append(ft.Container(height=14))
+            body_sections.append(ft.Text("來源", size=11, color=TEXT_MUTED, weight=ft.FontWeight.BOLD))
+            body_sections.append(ft.Text(source, size=10, color=TEXT_MUTED, selectable=True))
+
+        dlg = ft.AlertDialog(
+            title=ft.Text(f"{display}（v{version}）"),
+            content=ft.Container(
+                content=ft.Column(body_sections, tight=True, scroll=ft.ScrollMode.AUTO),
+                width=480,
+            ),
+            actions=[
+                ft.TextButton("關閉", on_click=lambda e: page.pop_dialog()),
+            ],
+        )
+        page.show_dialog(dlg)
+
     # --- Mods rendering ---
     def render_mods():
         mods_column.controls.clear()
@@ -434,14 +476,18 @@ def main(page: ft.Page):
             page.update()
             return
         for name, mod in mods_dict.items():
-            display = mod.get("display_name", name)
+            # Prefer Chinese display name / description when available
+            display = mod.get("display_name_zh") or mod.get("display_name", name)
             version = mod.get("version", "?")
-            desc = mod.get("description", "")
+            desc = mod.get("description_zh") or mod.get("description", "")
             installed = is_mod_installed(mod, state.get("palworld_path"))
-            mods_column.controls.append(build_mod_card(name, mod, display, version, desc, installed))
+            has_details = bool(mod.get("features_zh") or mod.get("usage_zh"))
+            mods_column.controls.append(
+                build_mod_card(name, mod, display, version, desc, installed, has_details)
+            )
         page.update()
 
-    def build_mod_card(name, mod, display, version, desc, installed):
+    def build_mod_card(name, mod, display, version, desc, installed, has_details=False):
         status_chip = ft.Container(
             content=ft.Row(
                 [
@@ -521,6 +567,19 @@ def main(page: ft.Page):
                 ),
             )
 
+        # "查看詳情" button — only show if mod has features_zh or usage_zh
+        actions_row = [status_chip, btn]
+        if has_details:
+            actions_row.insert(
+                0,
+                ft.TextButton(
+                    "查看詳情",
+                    icon=ft.Icons.INFO_OUTLINE,
+                    on_click=lambda e: show_mod_details(name, mod),
+                    style=ft.ButtonStyle(color=ACCENT),
+                ),
+            )
+
         return ft.Container(
             content=ft.Column(
                 [
@@ -541,8 +600,7 @@ def main(page: ft.Page):
                                 spacing=2,
                                 expand=True,
                             ),
-                            status_chip,
-                            btn,
+                            *actions_row,
                         ],
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,

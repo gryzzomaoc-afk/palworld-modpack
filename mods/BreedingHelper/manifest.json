@@ -1,12 +1,14 @@
 {
   "name": "BreedingHelper",
-  "display_name_zh": "育種助手",
+  "display_name_zh": "帕魯繁殖助手",
   "version": "v1.1+v2",
   "category": "breeding",
-  "description_zh": "育種配對計算 + 繁中 UI",
+  "description_zh": "自動算配種結果、染色/IV 鎖定、繁體中文 UI（薯條/CrazyChips 客製版）",
   "tags": [
     "繁中",
-    "UI"
+    "UI",
+    "繁殖",
+    "計算"
   ],
   "friend_allowed": true,
   "source": "CrazyChips custom build v1.1+v2 (upstream https://space.bilibili.com/26786884, patched by CrazyChips/Mavis)",
@@ -36,10 +38,11 @@
     }
   },
   "features_zh": [
-    "給 parent pair 算最優 child（CP、被動技能繼承）",
+    "自動算 parent pair 最優 child（CP、被動技能繼承）",
     "染色 / IV 鎖定（passive skill 篩選）",
     "群組規劃（批量配種 / 整個基地一次算）",
     "繁體中文 UI（v1.1 客製版）",
     "v2 修 F8 在 dedicated server crash 的問題"
-  ]
+  ],
+  "usage_zh": "1. 工具裝完後完全關閉 Palworld 再開（.pak + .lua 都要重新載入）。\n2. 進遊戲後按 F8 → 開啟繁殖助手 UI。\n3. 把兩隻要配的帕魯放進配種槽 → 工具會自動算結果、CP、被動技能繼承率。\n4. 染色 / IV 鎖定：在 UI 裡選想要的被動技能，工具會篩出能繼承的 parent 組合。\n5. 群組規劃：選整個帕魯群 → 一次列出所有可能的最優配對。\n6. 注意：\n   - 工具需要 UE4SS 已經裝好（前置需求）\n   - 朋友端要裝 + 進 server 才能用\n   - 如果按 F8 沒反應：在 server 上按一次 INS 鍵（UE4SS reload）"
 }

@@ -2,6 +2,33 @@
 
 All dates in GMT+8.
 
+## v1.1.0 (2026-08-02)
+
+### Added (新增)
+- **YetAnotherMinimap (小地圖雷達)** — Paldar 非官方最新版的小地圖
+  mod 加進 friend installer。顯示帕魯、寶箱、地下城、快速旅行、玩家
+  基地、死亡位置、技能果樹、稀有帕魯、BOSS 等資訊。純 client-side，
+  server 端不用裝。
+- **Mod 卡片全中文化** — UI 改用 `display_name_zh` + `description_zh`
+  顯示，catalog 預設就是繁體中文。
+- **「查看詳情」按鈕** — 每張 mod 卡多一個 Info 按鈕，點下去跳出
+  AlertDialog，裡面有完整「功能特色」bullet list + 「使用說明」段落
+  + 來源連結。
+- **每個 mod 加 `usage_zh` 欄位** — manifest 範例更新，所有 mod 都有
+  完整的中文使用說明（熱鍵、設定路徑、注意事項）。
+- **朋友 installer 重新打包成 .zip 發布** — 包含 .exe + SHA256.txt +
+  使用說明.txt，下載一次就包含所有需要的東西。
+
+### Friend installer
+- 朋友工具 v1.1.0 — 3 個 mod 自動抓到（BreedingHelper + UltraWeather +
+  YetAnotherMinimap），全部中文卡片 + 中文使用說明。
+- 下載連結：https://github.com/gryzzomaoc-afk/palworld-modpack/releases/download/v1.1.0/PalworldFriendModInstaller-v1.1.0.zip
+
+### Notes
+- v1.1.0 之後每加新 mod 不用朋友重抓 .exe（除非 UI 有改）— repo-driven
+  架構保留，朋友只要按「同步 MOD 資料庫」就會看到新 mod。
+- 從 v1.0.x 升級到 v1.1.0：需要重抓 .zip（UI 改了），朋友的 .exe 重灌。
+
 ## v1.0.9 (2026-08-02)
 
 ### Removed (移除)

@@ -1,0 +1,40 @@
+{
+  "name": "YetAnotherMinimap",
+  "display_name_zh": "小地圖雷達",
+  "version": "0.11.1",
+  "category": "ui",
+  "description_zh": "即時小地圖 + 雷達（帕魯、寶箱、BOSS、快速旅行、玩家基地全顯示）",
+  "tags": [
+    "小地圖",
+    "雷達",
+    "UI",
+    "客戶端"
+  ],
+  "friend_allowed": true,
+  "source": "YetAnotherMinimap 0.11.1 by SvenBrnn THE NOOB (Steam workshop 3630183149, Paldar unofficial latest fork, 2026-07-30)",
+  "components": {
+    "client": {
+      "zip": "client.zip",
+      "extract_to": "Pal/Content/Paks/LogicMods",
+      "needs_ue4ss": true,
+      "size_hint_kb": 640,
+      "files": [
+        "YetAnotherMinimap.pak"
+      ],
+      "sha256": "c2d28307c622f2ade977a055505da852708e189d66fced712be41c1fb6351e8d",
+      "_note": "LogicMod (.pak). Settings configurable in-game (title screen → bottom right) or via modconfig.json."
+    }
+  },
+  "features_zh": [
+    "即時螢幕小地圖（左上角預設）",
+    "顯示附近帕魯（包含閃光 / 稀有帕魯）",
+    "顯示寶箱、地下城、帕魯像位置",
+    "顯示技能果樹、玩家營地、快速旅行點",
+    "顯示死亡位置（找屍體用）",
+    "顯示 BOSS 位置（包含頭目級）",
+    "進基地自動隱藏（不擋畫面）",
+    "地下城 / 樹叢自動 zoom in",
+    "Paldar 血統：應該也會顯示其他玩家（需在 server 多人實測）"
+  ],
+  "usage_zh": "1. 工具裝完 .pak 後完全關閉 Palworld 再開。\n2. 進 server 後按一次 INS 鍵強制 UE4SS 重載 mod（單次就好）。\n3. 預設熱鍵：\n   - 左 Ctrl + H：切換小地圖顯示/隱藏\n   - 左 Ctrl + F8：進入移動模式（用方向鍵 / + - 調位置大小）\n   - Z：超級縮放模式（看遠處用）\n4. 想改設定：\n   - 簡單：回主選單（標題畫面）→ 找右下角「Settings」圖示進 YAM 設定 UI\n   - 進階：編輯 config.json（在 Palworld 設定目錄，UE4SS 啟動 log 會印路徑）\n5. 注意：server 端不用裝，朋友各裝各的就能看到彼此（前提是同一個 server）。"
+}

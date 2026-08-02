@@ -3,11 +3,12 @@
   "display_name_zh": "極致天氣",
   "version": "1.0.1",
   "category": "visual",
-  "description_zh": "進階天氣 / 天空系統",
+  "description_zh": "自訂日出日落 + 體積雲 + 戲劇化光線（讓帕魯世界看起來像風景大片）",
   "tags": [
     "天氣",
     "視覺",
-    "客戶端"
+    "客戶端",
+    "天空"
   ],
   "friend_allowed": true,
   "source": "Ultra Weather 1.0.1 by Fr4nsson (Steam workshop 4504, 2026-07-29)",
@@ -33,5 +34,6 @@
     "天氣模式的 post-process 覆寫（更戲劇化的光線）",
     "F8 即時同步 / 重套 preset",
     "Client-only（dedicated server 不適用）"
-  ]
+  ],
+  "usage_zh": "1. 工具裝完後完全關閉 Palworld 再開。\n2. 進遊戲後 F8 → 即時套用目前 preset（或重設一次）。\n3. 想調日出日落時間 / 雲量 / 霧色：\n   - 簡單：裝 ModConfigMenu（朋友 installer 之後會加）→ in-game 改\n   - 進階：編輯 Pal\\Binaries\\Win64\\ue4ss\\Mods\\UltraWeather\\config.lua → 改完按 INS reload\n4. 注意：\n   - Client-only，server 端不用裝\n   - 朋友各自裝才看得到效果（自己看到的風景會更美）\n   - 如果卡 FPS：把 F8 按住不放重置（會重新計算一次）"
 }
