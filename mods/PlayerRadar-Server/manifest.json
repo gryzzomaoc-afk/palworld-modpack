@@ -22,7 +22,7 @@
         "config.lua",
         "enabled.txt"
       ],
-      "sha256": "5a5d4b6e6f1bb92070b43d62ccea874ae27029d311cc86aa5026bfa5b761970d",
+      "sha256": "6c1b3619ea94988d6be6ee8d292266e9c164456c72cb7c6e5e6bd6a3f8a6827d",
       "_note": "Server-only UE4SS Lua mod. Configure config.lua's output_path to a Windows file share that the client-side PlayerRadar-Client can read."
     }
   },

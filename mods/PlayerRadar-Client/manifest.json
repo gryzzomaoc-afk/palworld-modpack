@@ -22,7 +22,7 @@
         "config.lua",
         "enabled.txt"
       ],
-      "sha256": "55e22b15a68798cecacdc7b6f9d7015d3febfe98c304ff0eb604f05c79c4c39a",
+      "sha256": "f112461b0fc048f31492df86306142df43828e9a91e0e155dfc7f37386fff3f9",
       "_note": "Client-only UE4SS Lua mod. Configure config.lua's server_json_path to point at the share PlayerRadar-Server writes to. If unreachable, falls back to local FindAllOf."
     }
   },
