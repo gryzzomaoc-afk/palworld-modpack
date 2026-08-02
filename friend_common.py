@@ -1097,11 +1097,24 @@ def verify_all_mods(catalog: dict, palworld_path: str) -> list[dict]:
             if not extract_to:
                 continue
             base = Path(palworld_path) / extract_to
+            # UE4SS mods put their files in a <modname>/ subfolder
+            # (e.g. ue4ss/Mods/BreedingHelper/Scripts/main.lua), while
+            # plain .pak mods (LogicMod, Paks mod) drop files directly
+            # in extract_to (e.g. ~mods/BreedingHelperUI_P.pak).
+            # Heuristic: only UE4SS Lua mods (extract_to ends with ue4ss/Mods)
+            # nest their files in a <modname>/ subfolder. LogicMods and
+            # plain Pak mods drop files directly in extract_to.
+            et_norm = extract_to.replace("\\", "/").rstrip("/")
+            if comp.get("needs_ue4ss", True) and et_norm.endswith("ue4ss/Mods"):
+                base = base / name
             for f in comp.get("files", []):
-                if not (base / f.split("/")[-1]).exists():
+                target = base / f
+                if not target.exists():
                     files_ok = False
                     comps_ok = False
-                    missing.append(f"{role}/{f.split('/')[-1]}")
+                    # Show the path the function actually checked
+                    rel = str(target.relative_to(Path(palworld_path)))
+                    missing.append(rel)
 
         if not is_mod_installed(mod, palworld_path):
             status = "not_installed"
