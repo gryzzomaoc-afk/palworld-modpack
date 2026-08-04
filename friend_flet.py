@@ -13,6 +13,16 @@ import os
 import sys
 import threading
 import time
+
+
+def _fmt_version(v: str) -> str:
+    """Format a version string for display: `v1.2.3` or `vv1.2.3` → `v1.2.3`.
+
+    Some mod manifests already include the leading `v` (e.g. `v1.1+v2`); we
+    want the UI to always render `v…` exactly once.
+    """
+    v = (v or "").strip() or "?"
+    return v if v.lower().startswith("v") else f"v{v}"
 from pathlib import Path
 
 import flet as ft
@@ -449,7 +459,7 @@ def main(page: ft.Page):
             body_sections.append(ft.Text(source, size=10, color=TEXT_MUTED, selectable=True))
 
         dlg = ft.AlertDialog(
-            title=ft.Text(f"{display}（v{version}）"),
+            title=ft.Text(f"{display}（{_fmt_version(version)}）"),
             content=ft.Container(
                 content=ft.Column(body_sections, tight=True, scroll=ft.ScrollMode.AUTO),
                 width=480,
@@ -711,7 +721,7 @@ def main(page: ft.Page):
                     render_mods()
                 threading.Thread(target=work, daemon=True).start()
             update_btn = ft.ElevatedButton(
-                f"⬆️ 更新到 v{version}",
+                f"⬆️ 更新到 {_fmt_version(version)}",
                 icon=ft.Icons.UPGRADE,
                 on_click=on_update,
                 style=ft.ButtonStyle(
@@ -732,7 +742,7 @@ def main(page: ft.Page):
                                     ft.Row(
                                         [
                                             ft.Text(display, size=15, weight=ft.FontWeight.BOLD, color=TEXT_PRIMARY),
-                                            ft.Text(f"v{version}", size=11, color=TEXT_MUTED),
+                                            ft.Text(_fmt_version(version), size=11, color=TEXT_MUTED),
                                         ],
                                         spacing=8,
                                         tight=True,

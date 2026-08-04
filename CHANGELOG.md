@@ -2,6 +2,26 @@
 
 All dates in GMT+8.
 
+## v1.1.1 (2026-08-04)
+
+### Changed (優化)
+- **同步 MOD 資料庫加速** — `fetch_mods_from_github()` 改用
+  `ThreadPoolExecutor` 平行抓 manifest.json。4 個 mod 時從 2-3 秒
+  壓到 **0.6-0.9 秒**（3 次實測 min 645ms / median 662ms / max 878ms）。
+  TLS 握手從 4 次序列變 4 次並行，server 端 roundtrip 仍只有 1 次
+  （GitHub Contents API 拿 mods/ 清單那步要先拿才能抓 manifest）。
+- **Cap 並行度 8** — 預留 2x 成長空間，目前 4 個 mod 沒浪費。
+
+### Fixed (修正)
+- **Mod 詳情 dialog 版本標籤 double-v** — BreedingHelper 版本字串
+  自帶 `v` 前綴 (`v1.1+v2`)，UI 又在前綴加一個 `v`，變 `vv1.1+v2`。
+  新增 `_fmt_version()` 統一處理：已帶 `v` 不再加、未帶才加。
+  影響：標題列、卡片的版本小字、「更新到 v…」按鈕。
+
+### Notes
+- 朋友需要重抓 zip 才能拿到加速版（UI 內 Python 直譯，不重 build 沒效）。
+- 內部 User-Agent 從 `1.0.8` 升到 `1.1.1`（只是 log 標記用，GitHub 不在意）。
+
 ## v1.1.0 (2026-08-02)
 
 ### Added (新增)

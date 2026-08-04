@@ -14,6 +14,7 @@ import time
 import urllib.error
 import urllib.request
 import ssl
+from concurrent.futures import ThreadPoolExecutor
 
 try:
     import certifi
@@ -290,6 +291,11 @@ def fetch_mods_from_github() -> dict:
       {"version": int, "updated": str, "mods": {<name>: <manifest>}}
 
     Only mods with `"friend_allowed": true` in their manifest are returned.
+
+    Performance: per-mod `manifest.json` fetches run in parallel
+    (ThreadPoolExecutor, max 8 workers).  On a 4-mod catalog the wall time
+    drops from ~4×latency to ~1×latency because raw.githubusercontent.com
+    needs a fresh TLS handshake per connection.
     """
     listing = _github_get_json(_github_api_url(GITHUB_MODS_SUBDIR))
     if not isinstance(listing, list):
@@ -298,25 +304,47 @@ def fetch_mods_from_github() -> dict:
             f"{GITHUB_MODS_SUBDIR!r} (expected directory listing)"
         )
 
-    mods: dict = {}
-    skipped: list = []
+    # First pass: filter to mod directories (no I/O, just a list scan)
+    mod_dirs: list[str] = []
     for entry in listing:
         if entry.get("type") != "dir":
             continue
-        mod_name = entry.get("name") or ""
+        mod_name = (entry.get("name") or "").strip()
         if not mod_name or mod_name.startswith("."):
             continue
-        manifest_url = _github_raw_url(f"{GITHUB_MODS_SUBDIR}/{mod_name}/manifest.json")
+        mod_dirs.append(mod_name)
+
+    # Second pass: fetch all manifests in parallel.  The shared SSL context
+    # is thread-safe in CPython and avoids rebuilding the trust chain per call.
+    ctx = _make_ssl_context()
+
+    def _fetch_one(mod_name: str) -> tuple[str, dict | None, str | None]:
+        manifest_url = _github_raw_url(
+            f"{GITHUB_MODS_SUBDIR}/{mod_name}/manifest.json"
+        )
         try:
             req = urllib.request.Request(manifest_url, headers={
-                "User-Agent": "PalworldFriendModInstaller/1.0.8",
+                "User-Agent": "PalworldFriendModInstaller/1.1.1",
             })
-            ctx = _make_ssl_context()
             with urllib.request.urlopen(req, timeout=15, context=ctx) as r:
                 data = r.read()
-            manifest = json.loads(data.decode("utf-8-sig"))
+            return mod_name, json.loads(data.decode("utf-8-sig")), None
         except Exception as e:
-            skipped.append({"name": mod_name, "reason": f"manifest fetch failed: {e}"})
+            return mod_name, None, f"manifest fetch failed: {e}"
+
+    raw_results: list[tuple[str, dict | None, str | None]] = []
+    if mod_dirs:
+        # Cap at 8 concurrent — enough for the current 4-mod catalog and
+        # headroom for ~2x growth before we'd even need to revisit this.
+        with ThreadPoolExecutor(max_workers=min(8, len(mod_dirs))) as ex:
+            raw_results = list(ex.map(_fetch_one, mod_dirs))
+
+    # Third pass: validate, filter, and resolve component URLs (purely local)
+    mods: dict = {}
+    skipped: list = []
+    for mod_name, manifest, err in raw_results:
+        if err:
+            skipped.append({"name": mod_name, "reason": err})
             continue
         if not isinstance(manifest, dict):
             skipped.append({"name": mod_name, "reason": "manifest is not a JSON object"})
