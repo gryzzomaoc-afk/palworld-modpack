@@ -2,6 +2,25 @@
 
 All dates in GMT+8.
 
+## v1.1.2 (2026-08-06) — mod added (no .exe rebuild needed)
+
+### Added (新增)
+- **SimpleBuildingBlueprints (簡易建築藍圖)** — Leafnwind 的 UE4SS Lua mod +
+  LogicMods 組合包。蓋好的基地可以存成藍圖、一鍵複製 / 重建 / 給朋友分享。
+  - 64 個 .lua + 150KB C++ DLL（v0.1.12）
+  - 原位置吸附、Free Camera、碰撞 / 支撐 / 素材三重驗證
+  - **Client-only**：所有計算本地，server 端零負擔
+  - 64 KB LogicMods .pak
+- **多 component manifest 支援** — `client`（UE4SS Lua mod）+ `client-assets`
+  （LogicMods .pak）兩個 component，installer 會依序裝到對的位置
+  - 自動建 `enabled.txt`、加 `BlueprintResearch : 1` 進 mods.txt
+  - 驗證 / 卸載 / state 全部跟著更新
+
+### Notes
+- **不需重抓 zip**：v1.1.1 的 .exe 已經支援「repo-driven + 多 component」，
+  按「同步 MOD 資料庫」就會看到第 5 張 mod 卡
+- 朋友那邊開 sync → 看到「簡易建築藍圖」→ 一鍵安裝 → 自動裝兩個 component
+
 ## v1.1.1 (2026-08-04)
 
 ### Changed (優化)

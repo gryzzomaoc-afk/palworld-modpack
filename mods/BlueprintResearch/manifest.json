@@ -1,0 +1,54 @@
+{
+  "name": "BlueprintResearch",
+  "display_name_zh": "簡易建築藍圖",
+  "display_name": "Simple Building Blueprints",
+  "version": "0.1.12",
+  "category": "utility",
+  "description_zh": "把蓋好的基地存成藍圖，之後可以一鍵複製 / 重建 / 分享。支援原位置吸附、Free Camera 自由視角、碰撞 / 支撐 / 素材三重驗證。",
+  "tags": [
+    "建築",
+    "藍圖",
+    "存檔",
+    "複製",
+    "重建"
+  ],
+  "friend_allowed": true,
+  "source": "Simple Building Blueprints v0.1.12 by Leafnwind (Steam workshop 3768908799, MIT). 邏輯全部在 client 端，server 端零負擔。",
+  "components": {
+    "client": {
+      "zip": "client.zip",
+      "extract_to": "Pal/Binaries/Win64/ue4ss/Mods",
+      "needs_ue4ss": true,
+      "size_hint_kb": 369,
+      "files": [
+        "Scripts/main.lua",
+        "dlls/main.dll",
+        "BlueprintResearch.modconfig.json"
+      ],
+      "sha256": "1e58afb4c432ff46731dad5c6b6a136a29a52b575779284929d96914492148e1",
+      "_note": "UE4SS Lua mod (64 個 .lua) + native C++ DLL (150 KB) + modconfig.json。installer 會自動建 enabled.txt 並把 'BlueprintResearch : 1' 加進 mods.txt。"
+    },
+    "client-assets": {
+      "zip": "client-assets.zip",
+      "extract_to": "Pal/Content/Paks/LogicMods",
+      "needs_ue4ss": false,
+      "size_hint_kb": 75,
+      "files": [
+        "BlueprintResearch.pak"
+      ],
+      "sha256": "5c4e1765df11b7309f5d045025bbd2466c73905e1efb7338e6a337be9288523b",
+      "_note": "LogicMod .pak (97 KB) — 藍圖 UI 元件。跟 UE4SS Lua 一起載入才會在建造選單出現「Create / Place Blueprint」按鈕。"
+    }
+  },
+  "features_zh": [
+    "把任何蓋好的結構（基地、平台、堡壘）存成藍圖",
+    "之後一鍵複製 / 重建 / 給朋友蓋一樣的（分享 .json 即可）",
+    "原位置吸附（V 鍵）：新放的藍圖可精準放回原本位置（10 個地基範圍內）",
+    "Free Camera 自由視角：放置模式可任意旋轉畫面找位置",
+    "碰撞 / 支撐 / 素材三重驗證：紅色 ghost 表示該位置放不下",
+    "可調參數全在 modconfig.json：1024 components 上限、4000cm snap range、驗證開關",
+    "64 個 .lua + C++ DLL，效能優化（v0.1.12 從 v0.1.9 完全重構）",
+    "Client-only：所有計算在本地完成，server 端完全零負擔"
+  ],
+  "usage_zh": "1. 工具裝完後完全關閉 Palworld 再開（.pak + .lua 都要重新載入）。\n2. 蓋好一個基地（任何東西都行）。\n3. 按 B 打開建造選單 → 找「Create Blueprint」按鈕（mod 注入的新按鈕）→ 進入建立模式。\n4. 按 T 設錨點 → 按 Y 框選範圍（要按 2 次）→ 按 Z 存檔退出 → 輸入藍圖名稱。\n5. 之後要複製 / 重建：按 B → 找「Place Blueprint」按鈕 → 開藍圖庫選一個 → Free Camera 找位置 → 確認。\n6. 想放回原本位置：進 Place 模式後按 V 開「原位置吸附」（10 個地基範圍內有效）。\n7. 熱鍵（在對的模式裡才有效）：\n   - G = 進 Create 模式（建造選單內）/ 切換選取目標\n   - T = 設錨點\n   - Y = 設框選角\n   - Z = 存檔退出\n   - K = 進 Place 模式\n   - V = 原位置吸附切換\n8. 給朋友：藍圖存在 C:\\Users\\<你>\\AppData\\Local\\SimpleBuildingBlueprints\\，把 .json 丟給他放同位置就能用。\n9. 注意：\n   - 需要 UE4SS 已經裝好（前置需求）\n   - Free Camera 只能在基地範圍內用\n   - Server 端不用裝，朋友各自裝各自的"
+}
